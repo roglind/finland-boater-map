@@ -1,8 +1,8 @@
 import { db, setLastUpdated, getMeta, setMeta } from './db';
 import type { RestrictionArea, TrafficSign, UpdateStatus } from '../types';
 
-const RAJOITUS_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://aineistot.vayla.fi/?path=ava/Vesi/Paikkatieto/Uusi_tietosisalto/rajoitusalue_a.gpkg');
-const VESILIIKENNE_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://aineistot.vayla.fi/?path=ava/Vesi/Paikkatieto/Uusi_tietosisalto/vesiliikennemerkit.gpkg');
+const RAJOITUS_URL = '/finland-boater-map/data/rajoitusalue_a.gpkg';
+const VESILIIKENNE_URL = '/finland-boater-map/data/vesiliikennemerkit.gpkg';
 
 export class DataUpdater {
   private worker: Worker | null = null;

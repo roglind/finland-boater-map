@@ -24,13 +24,14 @@ interface ParseErrorMessage {
 // Parse WKB geometry to GeoJSON
 function parseWKB(wkb: Uint8Array): any {
   try {
-    const geometry = wkx.Geometry.parse(Buffer.from(wkb));
+    const geometry = wkx.Geometry.parse(wkb);
     return geometry.toGeoJSON();
   } catch (error) {
     console.error('WKB parse error:', error);
     throw error;
   }
 }
+
 function parseRestrictionAreas(db: Database): RestrictionArea[] {
   const results: RestrictionArea[] = [];
   

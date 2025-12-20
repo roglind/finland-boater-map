@@ -1,13 +1,7 @@
-import { Buffer } from 'buffer';
-globalThis.Buffer = Buffer;
-
 import initSqlJs, { Database } from 'sql.js';
-import wkx from 'wkx';
-import initSqlJs, { Database } from 'sql.js';
-import wkx from 'wkx';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
-import { polygon, multiPolygon, point } from '@turf/helpers';
+import { polygon, multiPolygon } from '@turf/helpers';
 
 interface ParseMessage {
   type: 'parse';
@@ -28,13 +22,104 @@ interface ParseErrorMessage {
 
 // Parse WKB geometry to GeoJSON
 function parseWKB(wkb: Uint8Array): any {
-  try {
-    const geometry = wkx.Geometry.parse(wkb);
-    return geometry.toGeoJSON();
-  } catch (error) {
-    console.error('WKB parse error:', error);
-    throw error;
+  const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
+  let offset = 0;
+  
+  // Read byte order
+  const byteOrder = view.getUint8(offset);
+  offset += 1;
+  const littleEndian = byteOrder === 1;
+  
+  // Read geometry type
+  let geomType = view.getUint32(offset, littleEndian);
+  offset += 4;
+  
+  // Handle SRID flag (type might have SRID bit set)
+  const hasSRID = (geomType & 0x20000000) !== 0;
+  if (hasSRID) {
+    geomType = geomType & 0x0FFFFFFF;
+    offset += 4; // Skip SRID
   }
+  
+  // Point (type 1)
+  if (geomType === 1) {
+    const x = view.getFloat64(offset, littleEndian);
+    offset += 8;
+    const y = view.getFloat64(offset, littleEndian);
+    return { type: 'Point', coordinates: [x, y] };
+  }
+  
+  // Polygon (type 3)
+  if (geomType === 3) {
+    const numRings = view.getUint32(offset, littleEndian);
+    offset += 4;
+    const rings = [];
+    
+    for (let i = 0; i < numRings; i++) {
+      const numPoints = view.getUint32(offset, littleEndian);
+      offset += 4;
+      const ring = [];
+      
+      for (let j = 0; j < numPoints; j++) {
+        const x = view.getFloat64(offset, littleEndian);
+        offset += 8;
+        const y = view.getFloat64(offset, littleEndian);
+        offset += 8;
+        ring.push([x, y]);
+      }
+      rings.push(ring);
+    }
+    
+    return { type: 'Polygon', coordinates: rings };
+  }
+  
+  // MultiPolygon (type 6)
+  if (geomType === 6) {
+    const numPolygons = view.getUint32(offset, littleEndian);
+    offset += 4;
+    const polygons = [];
+    
+    for (let p = 0; p < numPolygons; p++) {
+      // Read inner polygon header
+      const innerByteOrder = view.getUint8(offset);
+      offset += 1;
+      const innerLittleEndian = innerByteOrder === 1;
+      
+      let innerGeomType = view.getUint32(offset, innerLittleEndian);
+      offset += 4;
+      
+      // Handle SRID in inner geometry
+      const innerHasSRID = (innerGeomType & 0x20000000) !== 0;
+      if (innerHasSRID) {
+        innerGeomType = innerGeomType & 0x0FFFFFFF;
+        offset += 4;
+      }
+      
+      const numRings = view.getUint32(offset, innerLittleEndian);
+      offset += 4;
+      const rings = [];
+      
+      for (let i = 0; i < numRings; i++) {
+        const numPoints = view.getUint32(offset, innerLittleEndian);
+        offset += 4;
+        const ring = [];
+        
+        for (let j = 0; j < numPoints; j++) {
+          const x = view.getFloat64(offset, innerLittleEndian);
+          offset += 8;
+          const y = view.getFloat64(offset, innerLittleEndian);
+          offset += 8;
+          ring.push([x, y]);
+        }
+        rings.push(ring);
+      }
+      polygons.push(rings);
+    }
+    
+    return { type: 'MultiPolygon', coordinates: polygons };
+  }
+  
+  throw new Error(`Unsupported geometry type: ${geomType}`);
 }
 
 function parseRestrictionAreas(db: Database): RestrictionArea[] {

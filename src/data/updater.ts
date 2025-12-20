@@ -1,9 +1,8 @@
 import { db, setLastUpdated, getMeta, setMeta } from './db';
 import type { RestrictionArea, TrafficSign, UpdateStatus } from '../types';
 
-const RAJOITUS_URL = 'https://aineistot.vayla.fi/?path=ava/Vesi/Paikkatieto/Uusi_tietosisalto/rajoitusalue_a.gpkg';
-const VESILIIKENNE_URL = 'https://aineistot.vayla.fi/?path=ava/Vesi/Paikkatieto/Uusi_tietosisalto/vesiliikennemerkit.gpkg';
-
+const RAJOITUS_URL = 'https://corsproxy.io/?https%3A%2F%2Faineistot.vayla.fi%2F%3Fpath%3Dava%2FVesi%2FPaikkatieto%2FUusi_tietosisalto%2Frajoitusalue_a.gpkg';
+const VESILIIKENNE_URL = 'https://corsproxy.io/?https%3A%2F%2Faineistot.vayla.fi%2F%3Fpath%3Dava%2FVesi%2FPaikkatieto%2FUusi_tietosisalto%2Fvesiliikennemerkit.gpkg';
 export class DataUpdater {
   private worker: Worker | null = null;
   private onStatusChange: (status: UpdateStatus) => void;

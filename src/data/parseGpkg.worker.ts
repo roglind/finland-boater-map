@@ -1,3 +1,8 @@
+import { Buffer } from 'buffer';
+globalThis.Buffer = Buffer;
+
+import initSqlJs, { Database } from 'sql.js';
+import wkx from 'wkx';
 import initSqlJs, { Database } from 'sql.js';
 import wkx from 'wkx';
 import type { RestrictionArea, TrafficSign } from '../types';

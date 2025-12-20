@@ -17,6 +17,7 @@
     "@turf/boolean-point-in-polygon": "^6.5.0",
     "@turf/distance": "^6.5.0",
     "@turf/turf": "^6.5.0",
+    "buffer": "^6.0.3",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
     "maplibre-gl": "^4.1.0",

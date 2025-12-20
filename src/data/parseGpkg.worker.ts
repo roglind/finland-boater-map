@@ -1,4 +1,5 @@
 import initSqlJs, { Database } from 'sql.js';
+import wkx from 'wkx';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
 import { polygon, multiPolygon, point } from '@turf/helpers';
@@ -22,85 +23,14 @@ interface ParseErrorMessage {
 
 // Parse WKB geometry to GeoJSON
 function parseWKB(wkb: Uint8Array): any {
-  // This is a simplified WKB parser for Point, Polygon, MultiPolygon
-  // In production, consider using a robust library like wkx
-  
-  const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
-  let offset = 0;
-  
-  const byteOrder = view.getUint8(offset);
-  offset += 1;
-  const littleEndian = byteOrder === 1;
-  
-  const geomType = view.getUint32(offset, littleEndian);
-  offset += 4;
-  
-  // Type 1 = Point, 3 = Polygon, 6 = MultiPolygon
-  if (geomType === 1) {
-    const x = view.getFloat64(offset, littleEndian);
-    offset += 8;
-    const y = view.getFloat64(offset, littleEndian);
-    return { type: 'Point', coordinates: [x, y] };
+  try {
+    const geometry = wkx.Geometry.parse(Buffer.from(wkb));
+    return geometry.toGeoJSON();
+  } catch (error) {
+    console.error('WKB parse error:', error);
+    throw error;
   }
-  
-  if (geomType === 3) {
-    const numRings = view.getUint32(offset, littleEndian);
-    offset += 4;
-    const rings = [];
-    
-    for (let i = 0; i < numRings; i++) {
-      const numPoints = view.getUint32(offset, littleEndian);
-      offset += 4;
-      const ring = [];
-      
-      for (let j = 0; j < numPoints; j++) {
-        const x = view.getFloat64(offset, littleEndian);
-        offset += 8;
-        const y = view.getFloat64(offset, littleEndian);
-        offset += 8;
-        ring.push([x, y]);
-      }
-      rings.push(ring);
-    }
-    
-    return { type: 'Polygon', coordinates: rings };
-  }
-  
-  if (geomType === 6) {
-    const numPolygons = view.getUint32(offset, littleEndian);
-    offset += 4;
-    const polygons = [];
-    
-    for (let p = 0; p < numPolygons; p++) {
-      // Skip WKB header for inner polygon
-      offset += 5;
-      const numRings = view.getUint32(offset, littleEndian);
-      offset += 4;
-      const rings = [];
-      
-      for (let i = 0; i < numRings; i++) {
-        const numPoints = view.getUint32(offset, littleEndian);
-        offset += 4;
-        const ring = [];
-        
-        for (let j = 0; j < numPoints; j++) {
-          const x = view.getFloat64(offset, littleEndian);
-          offset += 8;
-          const y = view.getFloat64(offset, littleEndian);
-          offset += 8;
-          ring.push([x, y]);
-        }
-        rings.push(ring);
-      }
-      polygons.push(rings);
-    }
-    
-    return { type: 'MultiPolygon', coordinates: polygons };
-  }
-  
-  throw new Error(`Unsupported geometry type: ${geomType}`);
 }
-
 function parseRestrictionAreas(db: Database): RestrictionArea[] {
   const results: RestrictionArea[] = [];
   

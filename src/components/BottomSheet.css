@@ -1,0 +1,202 @@
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 900;
+  max-height: 70vh;
+  transition: max-height 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-sheet.expanded {
+  max-height: 85vh;
+}
+
+.bottom-sheet.empty {
+  max-height: 80px;
+}
+
+.bottom-sheet-header {
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.drag-handle {
+  width: 40px;
+  height: 4px;
+  background: #CBD5E1;
+  border-radius: 2px;
+  margin: 0 auto 0.75rem;
+}
+
+.header-content {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dark-text);
+}
+
+.primary-info {
+  color: var(--primary-blue);
+  font-size: 1.1rem;
+}
+
+.no-data {
+  color: #64748B;
+  font-weight: 400;
+  font-size: 0.95rem;
+}
+
+.bottom-sheet-content {
+  overflow-y: auto;
+  flex: 1;
+  padding: 1rem 1.5rem 2rem;
+}
+
+.restrictions-section,
+.signs-section {
+  margin-bottom: 1.5rem;
+}
+
+.restrictions-section h3,
+.signs-section h3 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748B;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.restrictions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.restriction-item {
+  background: var(--light-bg);
+  border-left: 4px solid var(--warning-orange);
+  padding: 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.restriction-item.primary {
+  border-left-color: var(--error-red);
+  background: #FEF2F2;
+}
+
+.restriction-title {
+  font-weight: 600;
+  color: var(--dark-text);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge {
+  font-size: 0.7rem;
+  background: var(--error-red);
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.restriction-detail {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+.restriction-detail strong {
+  color: var(--dark-text);
+}
+
+.restriction-meta {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.signs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sign-item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.sign-item:hover {
+  border-color: var(--accent-teal);
+  box-shadow: var(--shadow-sm);
+}
+
+.sign-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.sign-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sign-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sign-name {
+  font-weight: 600;
+  color: var(--dark-text);
+  margin-bottom: 0.25rem;
+}
+
+.sign-detail {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin-bottom: 0.25rem;
+}
+
+.sign-distance {
+  font-size: 0.85rem;
+  color: var(--secondary-blue);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .bottom-sheet {
+    max-height: 60vh;
+  }
+  
+  .bottom-sheet.expanded {
+    max-height: 80vh;
+  }
+  
+  .bottom-sheet-content {
+    padding: 0.75rem 1rem 1.5rem;
+  }
+}

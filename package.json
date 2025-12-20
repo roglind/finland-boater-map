@@ -1,0 +1,38 @@
+{
+  "name": "boater-map-pwa",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "homepage": "https://roglind.github.io/finland-boater-map",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "maplibre-gl": "^4.1.0",
+    "dexie": "^3.2.4",
+    "dexie-react-hooks": "^1.1.7",
+    "@turf/turf": "^6.5.0",
+    "@turf/boolean-point-in-polygon": "^6.5.0",
+    "@turf/bbox": "^6.5.0",
+    "@turf/distance": "^6.5.0",
+    "rbush": "^3.0.1",
+    "sql.js": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@types/geojson": "^7946.0.13",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^0.19.8",
+    "workbox-window": "^7.0.0"
+  }
+}

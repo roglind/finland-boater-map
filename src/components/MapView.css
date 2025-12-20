@@ -1,0 +1,68 @@
+.map-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.boat-marker {
+  width: 32px;
+  height: 32px;
+  font-size: 28px;
+  text-align: center;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease;
+}
+
+.sign-marker {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.sign-marker:hover {
+  transform: scale(1.1);
+}
+
+.sign-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.sign-popup {
+  font-family: inherit;
+  padding: 0.5rem;
+}
+
+.sign-popup strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--primary-blue);
+}
+
+.sign-popup p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.sign-popup .distance {
+  color: #64748B;
+  font-size: 0.85rem;
+}
+
+/* Override MapLibre popup styles */
+.maplibregl-popup-content {
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.maplibregl-popup-close-button {
+  font-size: 1.25rem;
+  padding: 0.25rem 0.5rem;
+}

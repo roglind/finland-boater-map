@@ -36,12 +36,16 @@ function parseWKB(wkb: Uint8Array): any {
   offset += 4;
   
   // Handle SRID flag (type might have SRID bit set)
+  console.log('DEBUG: Raw geomType =', geomType);
   const hasSRID = (geomType & 0x20000000) !== 0;
+  console.log('DEBUG: hasSRID =', hasSRID);
   if (hasSRID) {
     geomType = geomType & 0x0FFFFFFF;
-    offset += 4; // Skip SRID
+    console.log('DEBUG: geomType after SRID removal =', geomType);
+    offset += 4;
   }
-  
+  console.log('DEBUG: Final geomType =', geomType);  
+
   // Point (type 1)
   if (geomType === 1) {
     const x = view.getFloat64(offset, littleEndian);

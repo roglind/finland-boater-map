@@ -1,5 +1,4 @@
-// Updated with SRID handling - version 2
-
+// WKB Parser with SRID support - Force rebuild v3
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';

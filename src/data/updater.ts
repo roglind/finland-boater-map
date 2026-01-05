@@ -87,9 +87,9 @@ export class DataUpdater {
     const response = await fetch(url, { headers });
     
     if (response.status === 304) {
-      // Not modified, return empty buffer (will skip parsing)
-      throw new Error('Data not modified');
-    }
+      console.log('Data not modified, using cached version');
+      return null; // Signal that data hasn't changed
+    } 
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

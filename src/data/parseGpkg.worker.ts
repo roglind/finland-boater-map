@@ -1,3 +1,5 @@
+// Updated with SRID handling - version 2
+
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';

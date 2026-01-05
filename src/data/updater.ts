@@ -112,7 +112,7 @@ export class DataUpdater {
       // Create worker if not exists
       if (!this.worker) {
         this.worker = new Worker(
-          new URL('./parseGpkg.worker.ts', import.meta.url),
+          new URL('./gpkgParser.worker.ts', import.meta.url),
           { type: 'module' }
         );
       }

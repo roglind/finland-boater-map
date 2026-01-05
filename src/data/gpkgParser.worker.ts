@@ -1,4 +1,4 @@
-// WKB Parser - Build timestamp: 2025-01-07-15-30
+// WKB Parser - Build timestamp: 2025-01-07-16-45-FINAL
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';

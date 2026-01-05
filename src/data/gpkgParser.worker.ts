@@ -37,7 +37,7 @@ function parseWKB(wkb: Uint8Array): any {
   
   // Handle SRID flag (type might have SRID bit set)
   console.log('DEBUG: Raw geomType =', geomType);
-  const hasSRID = (geomType & 0x20000000) !== 0;
+  const hasSRID = geomType > 0x0FFFFFFF;
   console.log('DEBUG: hasSRID =', hasSRID);
   if (hasSRID) {
     geomType = geomType & 0x0FFFFFFF;

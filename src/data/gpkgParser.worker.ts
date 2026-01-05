@@ -1,4 +1,4 @@
-// WKB Parser - Build timestamp: 2025-01-07-16-45-FINAL
+// WKB Parser - Build timestamp: 2025-01-07-17-00-MASK-FIX
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -37,10 +37,10 @@ function parseWKB(wkb: Uint8Array): any {
   
   // Handle SRID flag (type might have SRID bit set)
   console.log('DEBUG: Raw geomType =', geomType);
-  const hasSRID = geomType > 0x0FFFFFFF;
+  const hasSRID = geomType > 0xFF;
   console.log('DEBUG: hasSRID =', hasSRID);
   if (hasSRID) {
-    geomType = geomType & 0x0FFFFFFF;
+    geomType = geomType & 0xFF;
     console.log('DEBUG: geomType after SRID removal =', geomType);
     offset += 4;
   }

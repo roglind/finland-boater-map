@@ -1,4 +1,4 @@
-// WKB Parser with SRID support - Force rebuild v3
+// WKB Parser - Build timestamp: 2025-01-07-15-30
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';

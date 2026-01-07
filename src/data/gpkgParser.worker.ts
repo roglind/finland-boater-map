@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-CORRECT-ERROR
+// WKB Parser - Build: 2025-01-07-17-10-CORRECT-SPELLING
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -219,7 +219,7 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const bboxArr = bbox(feat) as [number, number, number, number];
     
     results.push({
-      id: safeID,
+      id: safeId,
       rajoitustyyppi: (row.RAJOITUSTYYPPI as string) || '',
       rajoitustyypit: (row.RAJOITUSTYYPIT as string) || '',
       suuruusKmh,
@@ -266,7 +266,7 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
     const rajoitusarvo = row.RAJOITUSARVO != null ? row.RAJOITUSARVO as number : undefined;
     
     results.push({
-      id: safeID,
+      id: safeId,
       nimiFi: (row.NIMIFI || row.NIMI_FI || row.nimifi || row.nimi_fi || '') as string,
       nimiSv: (row.NIMISV || row.NIMI_SV || row.nimisv || row.nimi_sv || '') as string,
       vlmlajityyppi,

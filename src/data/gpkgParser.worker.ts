@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-FULL-FIX
+// WKB Parser - Build: 2025-01-07-17-10-FIX-RETRY
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -66,27 +66,47 @@ function parseWKB(wkb: Uint8Array): any {
   
   // Polygon (type 3)
   if (geomType === 3) {
+    console.log('DEBUG: Parsing Polygon, current offset:', offset, 'buffer length:', view.byteLength);
     const numRings = view.getUint32(offset, littleEndian);
     offset += 4;
+    console.log('DEBUG: Number of rings:', numRings);
     const rings = [];
-    
+  
     for (let i = 0; i < numRings; i++) {
+      console.log('DEBUG: Ring', i, 'offset:', offset);
       const numPoints = view.getUint32(offset, littleEndian);
       offset += 4;
+      console.log('DEBUG: Ring', i, 'has', numPoints, 'points');
       const ring = [];
-      
+    
       for (let j = 0; j < numPoints; j++) {
+        if (offset + 16 > view.byteLength) {
+          console.error('DEBUG: Would read past buffer at point', j, 'offset:', offset, 'buffer length:', view.byteLength);
+          throw new Error('Buffer overflow at point ' + j);
+        }
+      
         const x = view.getFloat64(offset, littleEndian);
         offset += 8;
         const y = view.getFloat64(offset, littleEndian);
         offset += 8;
-        if (hasZ) offset += 8;
-        if (hasM) offset += 8;
+      
+        console.log('DEBUG: Point', j, '- x:', x, 'y:', y, 'offset now:', offset);
+      
+        if (hasZ) {
+          console.log('DEBUG: Skipping Z coordinate');
+          offset += 8;
+        }
+        if (hasM) {
+          console.log('DEBUG: Skipping M coordinate');
+          offset += 8;
+        }
+      
         ring.push([x, y]);
       }
       rings.push(ring);
     }
-    
+  
+    console.log('DEBUG: Polygon parsed successfully');
     return { type: 'Polygon', coordinates: rings };
   }
   

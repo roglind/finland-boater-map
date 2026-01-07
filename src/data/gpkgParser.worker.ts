@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-SUBTRACT
+// WKB Parser - Build: 2025-01-07-17-10-DEBUG
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -37,15 +37,21 @@ function parseWKB(wkb: Uint8Array): any {
   
   // Handle SRID flag (type might have SRID bit set)
   console.log('DEBUG: Raw geomType =', geomType);
-  const hasSRID = geomType > 0x0FFFFFFF;
-  console.log('DEBUG: hasSRID =', hasSRID);
-  if (hasSRID) {
-    geomType = geomType - 0x20000000;
-    console.log('DEBUG: geomType after SRID removal =', geomType);
-    offset += 4;
-  }
-  console.log('DEBUG: Final geomType =', geomType);  
+  console.log('DEBUG: Lower byte =', geomType & 0xFF);
+  console.log('DEBUG: Lower 16 bits =', geomType & 0xFFFF);
 
+  // Check if it's a GeoPackage geometry with SRID (bit 29 set)
+  const hasGeoPackageSRID = (geomType & 0x20000000) !== 0;
+  console.log('DEBUG: hasGeoPackageSRID =', hasGeoPackageSRID);
+
+  if (hasGeoPackageSRID) {
+    // GeoPackage stores type in bits 0-15, with flags in higher bits
+    geomType = geomType & 0xFFFF; // Get lower 16 bits
+    offset += 4; // Skip SRID
+    console.log('DEBUG: geomType after GeoPackage SRID handling =', geomType);
+  }
+
+  console.log('DEBUG: Final geomType =', geomType);
   // Point (type 1)
   if (geomType === 1) {
     const x = view.getFloat64(offset, littleEndian);

@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-CORRECT-TRAFCCISIGN
+// WKB Parser - Build: 2025-01-07-17-10-CORRECT-ERROR
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -206,6 +206,8 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const geometry = parseWKB(geomWKB);
     
     // Parse SUURUUS for numeric value
+    const uniqueId = row.id || row.fid || results.length;
+    const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;
     const suuruusRaw = (row.SUURUUS as string) || '';
     const suuruusMatch = suuruusRaw.match(/(\d+)/);
     const suuruusKmh = suuruusMatch ? parseInt(suuruusMatch[1], 10) : undefined;
@@ -217,7 +219,7 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const bboxArr = bbox(feat) as [number, number, number, number];
     
     results.push({
-      id: row.id as number,
+      id: safeID,
       rajoitustyyppi: (row.RAJOITUSTYYPPI as string) || '',
       rajoitustyypit: (row.RAJOITUSTYYPIT as string) || '',
       suuruusKmh,
@@ -258,12 +260,13 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
     const row = stmt.getAsObject();
     const geomWKB = row.geom as Uint8Array;
     const geometry = parseWKB(geomWKB);
-    
+    const uniqueId = row.id || row.fid || results.length;
+    const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;
     const vlmlajityyppi = row.VLMLAJITYYPPI as number;
     const rajoitusarvo = row.RAJOITUSARVO != null ? row.RAJOITUSARVO as number : undefined;
     
     results.push({
-      id: row.id as number,
+      id: safeID,
       nimiFi: (row.NIMIFI || row.NIMI_FI || row.nimifi || row.nimi_fi || '') as string,
       nimiSv: (row.NIMISV || row.NIMI_SV || row.nimisv || row.nimi_sv || '') as string,
       vlmlajityyppi,

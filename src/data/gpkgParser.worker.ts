@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-FIX
+// WKB Parser - Build: 2025-01-07-17-10-FULL-FIX
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -26,51 +26,41 @@ function parseWKB(wkb: Uint8Array): any {
   const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
   let offset = 0;
   
-  // Read byte order
   const byteOrder = view.getUint8(offset);
   offset += 1;
   const littleEndian = byteOrder === 1;
   
-  // Read geometry type
   let geomType = view.getUint32(offset, littleEndian);
   offset += 4;
   
-  // Handle SRID flag (type might have SRID bit set)
   console.log('DEBUG: Raw geomType =', geomType, '(hex: 0x' + geomType.toString(16) + ')');
-
-  // GeoPackage uses these flags:
-  // Bit 28 (0x10000000): Has M coordinate  
-  // Bit 29 (0x20000000): Has Z coordinate
-  // Bit 30 (0x40000000): Has SRID
+  
+  // GeoPackage flags
   const hasZ = (geomType & 0x20000000) !== 0;
   const hasM = (geomType & 0x10000000) !== 0;
   const hasSRID = (geomType & 0x40000000) !== 0;
-
+  
   console.log('DEBUG: hasZ =', hasZ, 'hasM =', hasM, 'hasSRID =', hasSRID);
-
-  // Get the base geometry type (lower 8 bits)
+  
   const baseType = geomType & 0x07;
   console.log('DEBUG: Base type =', baseType);
-
-  // Skip SRID if present
+  
   if (hasSRID) {
     offset += 4;
     console.log('DEBUG: Skipped SRID');
   }
-
-  // Use base type for geometry parsing
+  
   geomType = baseType;
-  console.log('DEBUG: Final geomType =', geomType);  // Point (type 1)
+  console.log('DEBUG: Final geomType =', geomType);
+  
+  // Point (type 1)
   if (geomType === 1) {
     const x = view.getFloat64(offset, littleEndian);
     offset += 8;
     const y = view.getFloat64(offset, littleEndian);
     offset += 8;
-  
-    // Skip Z and M if present
     if (hasZ) offset += 8;
     if (hasM) offset += 8;
-  
     return { type: 'Point', coordinates: [x, y] };
   }
   
@@ -79,33 +69,24 @@ function parseWKB(wkb: Uint8Array): any {
     const numRings = view.getUint32(offset, littleEndian);
     offset += 4;
     const rings = [];
-  
+    
     for (let i = 0; i < numRings; i++) {
       const numPoints = view.getUint32(offset, littleEndian);
       offset += 4;
       const ring = [];
-    
+      
       for (let j = 0; j < numPoints; j++) {
         const x = view.getFloat64(offset, littleEndian);
         offset += 8;
         const y = view.getFloat64(offset, littleEndian);
         offset += 8;
-      
-        // Skip Z coordinate if present
-        if (hasZ) {
-          offset += 8;
-        }
-      
-        // Skip M coordinate if present
-        if (hasM) {
-          offset += 8;
-        }
-      
+        if (hasZ) offset += 8;
+        if (hasM) offset += 8;
         ring.push([x, y]);
       }
       rings.push(ring);
     }
-  
+    
     return { type: 'Polygon', coordinates: rings };
   }
   
@@ -116,7 +97,6 @@ function parseWKB(wkb: Uint8Array): any {
     const polygons = [];
     
     for (let p = 0; p < numPolygons; p++) {
-      // Read inner polygon header
       const innerByteOrder = view.getUint8(offset);
       offset += 1;
       const innerLittleEndian = innerByteOrder === 1;
@@ -124,10 +104,11 @@ function parseWKB(wkb: Uint8Array): any {
       let innerGeomType = view.getUint32(offset, innerLittleEndian);
       offset += 4;
       
-      // Handle SRID in inner geometry
-      const innerHasSRID = (innerGeomType & 0x20000000) !== 0;
+      const innerHasZ = (innerGeomType & 0x20000000) !== 0;
+      const innerHasM = (innerGeomType & 0x10000000) !== 0;
+      const innerHasSRID = (innerGeomType & 0x40000000) !== 0;
+      
       if (innerHasSRID) {
-        innerGeomType = innerGeomType & 0x0FFFFFFF;
         offset += 4;
       }
       
@@ -145,6 +126,8 @@ function parseWKB(wkb: Uint8Array): any {
           offset += 8;
           const y = view.getFloat64(offset, innerLittleEndian);
           offset += 8;
+          if (innerHasZ) offset += 8;
+          if (innerHasM) offset += 8;
           ring.push([x, y]);
         }
         rings.push(ring);

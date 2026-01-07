@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-CORRECT-SPELLING
+// WKB Parser - Build: 2025-01-07-17-10-CORRECT-TRAFCCISIGN
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -33,7 +33,6 @@ interface ParseErrorMessage {
   
     if (magic1 === 0x47 && magic2 === 0x50) {
       // This is GeoPackage Binary Format
-      console.log('DEBUG: GeoPackage Binary Format detected');
     
       // Skip GeoPackage header
       const flags = view.getUint8(offset + 3);
@@ -46,7 +45,6 @@ interface ParseErrorMessage {
       else if (envelopeType === 3) offset += 48; // XYM envelope  
       else if (envelopeType === 4) offset += 64; // XYZM envelope
     
-      console.log('DEBUG: Skipped GeoPackage header, now at offset:', offset);
     }
   
     // Now read standard WKB
@@ -58,17 +56,14 @@ interface ParseErrorMessage {
     offset += 4;
   
   // Rest of the function stays the same...  
-  console.log('DEBUG: Raw geomType =', geomType, '(hex: 0x' + geomType.toString(16) + ')');
   
   // GeoPackage flags
   const hasZ = (geomType & 0x20000000) !== 0;
   const hasM = (geomType & 0x10000000) !== 0;
   const hasSRID = (geomType & 0x40000000) !== 0;
   
-  console.log('DEBUG: hasZ =', hasZ, 'hasM =', hasM, 'hasSRID =', hasSRID);
   
   const baseType = geomType & 0x07;
-  console.log('DEBUG: Base type =', baseType);
   
   if (hasSRID) {
     offset += 4;
@@ -76,7 +71,6 @@ interface ParseErrorMessage {
   }
   
   geomType = baseType;
-  console.log('DEBUG: Final geomType =', geomType);
   
   // Point (type 1)
   if (geomType === 1) {
@@ -91,17 +85,13 @@ interface ParseErrorMessage {
   
   // Polygon (type 3)
   if (geomType === 3) {
-    console.log('DEBUG: Parsing Polygon, current offset:', offset, 'buffer length:', view.byteLength);
     const numRings = view.getUint32(offset, littleEndian);
     offset += 4;
-    console.log('DEBUG: Number of rings:', numRings);
     const rings = [];
   
     for (let i = 0; i < numRings; i++) {
-      console.log('DEBUG: Ring', i, 'offset:', offset);
       const numPoints = view.getUint32(offset, littleEndian);
       offset += 4;
-      console.log('DEBUG: Ring', i, 'has', numPoints, 'points');
       const ring = [];
     
       for (let j = 0; j < numPoints; j++) {
@@ -262,30 +252,7 @@ function deriveIconKey(vlmlajityyppi: number, rajoitusarvo?: number): string {
 function parseTrafficSigns(db: Database): TrafficSign[] {
   const results: TrafficSign[] = [];
   
-  const stmt = db.prepare(`
-    SELECT 
-      fid as id,
-      NIMIFI,
-      NIMISV,
-      VLMLAJITYYPPI,
-      VLMTYYPPI,
-      RAJOITUSARVO,
-      LISAKILVENTEKSTIFI,
-      LISAKILVENTEKSTISV,
-      SIJAINTIFI,
-      SIJAINTISV,
-      VAYLALAJI,
-      PAATOS,
-      VAIKUTUSALUE,
-      PATATYYPPI,
-      PAKOTYYPPI,
-      TKL_NUMERO,
-      MITTAUSPAIVA,
-      VAYLAT,
-      IRROTUS_PVM,
-      geom
-    FROM vesiliikennemerkit
-  `);
+  const stmt = db.prepare(`SELECT * FROM vesiliikennemerkit`);
   
   while (stmt.step()) {
     const row = stmt.getAsObject();
@@ -297,24 +264,24 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
     
     results.push({
       id: row.id as number,
-      nimiFi: row.NIMIFI as string,
-      nimiSv: row.NIMISV as string,
+      nimiFi: (row.NIMIFI || row.NIMI_FI || row.nimifi || row.nimi_fi || '') as string,
+      nimiSv: (row.NIMISV || row.NIMI_SV || row.nimisv || row.nimi_sv || '') as string,
       vlmlajityyppi,
-      vlmtyyppi: row.VLMTYYPPI as number,
+      vlmtyyppi: row.VLMTYYPPI || row.vlmtyyppi || 0 as number,
       rajoitusarvo,
-      lisakilventekstiFi: row.LISAKILVENTEKSTIFI as string,
-      lisakilventekstiSv: row.LISAKILVENTEKSTISV as string,
-      sijaintiFi: row.SIJAINTIFI as string,
-      sijaintiSv: row.SIJAINTISV as string,
-      vaylalaji: row.VAYLALAJI as string,
-      paatos: row.PAATOS as string,
-      vaikutusalue: row.VAIKUTUSALUE as string,
-      patatyyppi: row.PATATYYPPI as number,
-      pakotyyppi: row.PAKOTYYPPI as number,
-      tklNumero: row.TKL_NUMERO as number,
-      mittauspaiva: row.MITTAUSPAIVA as string,
-      vaylat: row.VAYLAT as string,
-      irrotusPvm: row.IRROTUS_PVM as string,
+      lisakilventekstiFi: (row.LISAKILVENTEKSTIFI || row.LISAKILVENTEKSTI_FI || row.lisakilventekstifi || row.lisakilventeksti_fi || '') as string,
+      lisakilventekstiSv: (row.LISAKILVENTEKSTISV || row.LISAKILVENTEKSTI_SV || row.lisakilventekstisv || row.lisakilventeksti_sv || '') as string,
+      sijaintiFi: (row.SIJAINTIFI || row.SIJAINTI_FI || row.sijaintifi || row.sijainti_fi || '') as string,
+      sijaintiSv: (row.SIJAINTISV || row.SIJAINTI_SV || row.sijaintisv || row.sijainti_sv || '') as string,
+      vaylalaji: (row.VAYLALAJI || row.vaylalaji || '') as string,
+      paatos: (row.PAATOS || row.paatos || '') as string,
+      vaikutusalue: (row.VAIKUTUSALUE || row.vaikutusalue || '') as string,
+      patatyyppi: row.PATATYYPPI || row.patatyyppi || 0 as number,
+      pakotyyppi: row.PAKOTYYPPI || row.pakotyyppi || 0 as number,
+      tklNumero: row.TKL_NUMERO || row.tkl_numero || 0 as number,
+      mittauspaiva: (row.MITTAUSPAIVA || row.mittauspaiva || '') as string,
+      vaylat: (row.VAYLAT || row.vaylat || '') as string,
+      irrotusPvm: (row.IRROTUS_PVM || row.irrotus_pvm || '') as string,
       geometry: geometry as any,
       iconKey: deriveIconKey(vlmlajityyppi, rajoitusarvo)
     });

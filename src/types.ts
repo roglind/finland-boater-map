@@ -1,3 +1,4 @@
+// FIX SPELLING ERRORS
 import type { Point, Polygon, MultiPolygon } from 'geojson';
 
 export interface RestrictionArea {
@@ -28,8 +29,8 @@ export interface TrafficSign {
   vlmlajityyppi: number;
   vlmtyyppi: number;
   rajoitusarvo?: number; // nullable
-  lisakilmentekstiFi?: string;
-  lisakilmentekstiSv?: string;
+  lisakilventekstiFi?: string;
+  lisakilventekstiSv?: string;
   sijaintiFi?: string;
   sijaintiSv?: string;
   vaylalaji?: string;

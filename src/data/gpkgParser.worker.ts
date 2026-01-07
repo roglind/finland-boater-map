@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-DEBUG
+// WKB Parser - Build: 2025-01-07-17-10-DEBUG2
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -36,23 +36,31 @@ function parseWKB(wkb: Uint8Array): any {
   offset += 4;
   
   // Handle SRID flag (type might have SRID bit set)
-  console.log('DEBUG: Raw geomType =', geomType);
-  console.log('DEBUG: Lower byte =', geomType & 0xFF);
-  console.log('DEBUG: Lower 16 bits =', geomType & 0xFFFF);
+  console.log('DEBUG: Raw geomType =', geomType, '(hex: 0x' + geomType.toString(16) + ')');
 
-  // Check if it's a GeoPackage geometry with SRID (bit 29 set)
-  const hasGeoPackageSRID = (geomType & 0x20000000) !== 0;
-  console.log('DEBUG: hasGeoPackageSRID =', hasGeoPackageSRID);
+  // GeoPackage uses these flags:
+  // Bit 28 (0x10000000): Has M coordinate  
+  // Bit 29 (0x20000000): Has Z coordinate
+  // Bit 30 (0x40000000): Has SRID
+  const hasZ = (geomType & 0x20000000) !== 0;
+  const hasM = (geomType & 0x10000000) !== 0;
+  const hasSRID = (geomType & 0x40000000) !== 0;
 
-  if (hasGeoPackageSRID) {
-    // GeoPackage stores type in bits 0-15, with flags in higher bits
-    geomType = geomType & 0xFFFF; // Get lower 16 bits
-    offset += 4; // Skip SRID
-    console.log('DEBUG: geomType after GeoPackage SRID handling =', geomType);
+  console.log('DEBUG: hasZ =', hasZ, 'hasM =', hasM, 'hasSRID =', hasSRID);
+
+  // Get the base geometry type (lower 8 bits)
+  const baseType = geomType & 0xFF;
+  console.log('DEBUG: Base type =', baseType);
+
+  // Skip SRID if present
+  if (hasSRID) {
+    offset += 4;
+    console.log('DEBUG: Skipped SRID');
   }
 
-  console.log('DEBUG: Final geomType =', geomType);
-  // Point (type 1)
+  // Use base type for geometry parsing
+  geomType = baseType;
+  console.log('DEBUG: Final geomType =', geomType);  // Point (type 1)
   if (geomType === 1) {
     const x = view.getFloat64(offset, littleEndian);
     offset += 8;

@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-FIX-RETRY
+// WKB Parser - Build: 2025-01-07-17-10-FIX-RETRY2
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -21,18 +21,43 @@ interface ParseErrorMessage {
   error: string;
 }
 
-// Parse WKB geometry to GeoJSON
-function parseWKB(wkb: Uint8Array): any {
-  const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
-  let offset = 0;
+  // Parse WKB geometry to GeoJSON
+  function parseWKB(wkb: Uint8Array): any {
+    const view = new DataView(wkb.buffer, wkb.byteOffset, wkb.byteLength);
+    let offset = 0;
   
-  const byteOrder = view.getUint8(offset);
-  offset += 1;
-  const littleEndian = byteOrder === 1;
+    // GeoPackage Binary Format has a special header
+    // Check for GeoPackage magic bytes 'GP'
+    const magic1 = view.getUint8(offset);
+    const magic2 = view.getUint8(offset + 1);
   
-  let geomType = view.getUint32(offset, littleEndian);
-  offset += 4;
+    if (magic1 === 0x47 && magic2 === 0x50) {
+      // This is GeoPackage Binary Format
+      console.log('DEBUG: GeoPackage Binary Format detected');
+    
+      // Skip GeoPackage header
+      const flags = view.getUint8(offset + 3);
+      offset += 8; // Skip 8-byte header
+    
+      // Skip envelope if present (flags & 0x0E)
+      const envelopeType = (flags >> 1) & 0x07;
+      if (envelopeType === 1) offset += 32; // XY envelope
+      else if (envelopeType === 2) offset += 48; // XYZ envelope
+      else if (envelopeType === 3) offset += 48; // XYM envelope  
+      else if (envelopeType === 4) offset += 64; // XYZM envelope
+    
+      console.log('DEBUG: Skipped GeoPackage header, now at offset:', offset);
+    }
   
+    // Now read standard WKB
+    const byteOrder = view.getUint8(offset);
+    offset += 1;
+    const littleEndian = byteOrder === 1;
+  
+    let geomType = view.getUint32(offset, littleEndian);
+    offset += 4;
+  
+  // Rest of the function stays the same...  
   console.log('DEBUG: Raw geomType =', geomType, '(hex: 0x' + geomType.toString(16) + ')');
   
   // GeoPackage flags

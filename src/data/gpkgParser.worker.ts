@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-DEBUG2
+// WKB Parser - Build: 2025-01-07-17-10-NEW-MASK
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -49,7 +49,7 @@ function parseWKB(wkb: Uint8Array): any {
   console.log('DEBUG: hasZ =', hasZ, 'hasM =', hasM, 'hasSRID =', hasSRID);
 
   // Get the base geometry type (lower 8 bits)
-  const baseType = geomType & 0xFF;
+  const baseType = geomType & 0x07;
   console.log('DEBUG: Base type =', baseType);
 
   // Skip SRID if present

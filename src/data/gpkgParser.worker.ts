@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-NEW-MASK
+// WKB Parser - Build: 2025-01-07-17-10-FIX
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -65,6 +65,12 @@ function parseWKB(wkb: Uint8Array): any {
     const x = view.getFloat64(offset, littleEndian);
     offset += 8;
     const y = view.getFloat64(offset, littleEndian);
+    offset += 8;
+  
+    // Skip Z and M if present
+    if (hasZ) offset += 8;
+    if (hasM) offset += 8;
+  
     return { type: 'Point', coordinates: [x, y] };
   }
   
@@ -73,22 +79,33 @@ function parseWKB(wkb: Uint8Array): any {
     const numRings = view.getUint32(offset, littleEndian);
     offset += 4;
     const rings = [];
-    
+  
     for (let i = 0; i < numRings; i++) {
       const numPoints = view.getUint32(offset, littleEndian);
       offset += 4;
       const ring = [];
-      
+    
       for (let j = 0; j < numPoints; j++) {
         const x = view.getFloat64(offset, littleEndian);
         offset += 8;
         const y = view.getFloat64(offset, littleEndian);
         offset += 8;
+      
+        // Skip Z coordinate if present
+        if (hasZ) {
+          offset += 8;
+        }
+      
+        // Skip M coordinate if present
+        if (hasM) {
+          offset += 8;
+        }
+      
         ring.push([x, y]);
       }
       rings.push(ring);
     }
-    
+  
     return { type: 'Polygon', coordinates: rings };
   }
   

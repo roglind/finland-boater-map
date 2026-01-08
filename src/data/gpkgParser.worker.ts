@@ -1,8 +1,28 @@
-// WKB Parser - Build: 2025-01-07-17-10-MORE-DEBUG
+// WKB Parser - Build: 2025-01-07-17-10-MORE-DEBUG2
 import initSqlJs, { Database } from 'sql.js';
+import proj4 from 'proj4';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
 import { polygon, multiPolygon } from '@turf/helpers';
+
+// Define ETRS-TM35FIN (EPSG:3067) projection
+proj4.defs('EPSG:3067', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+
+// Function to transform coordinates from ETRS-TM35FIN to WGS84
+function transformCoordinates(coords: number[]): number[] {
+  if (coords.length === 2) {
+    // Single point [x, y] -> [lng, lat]
+    const [x, y] = coords;
+    // Check if already in WGS84 range
+    if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
+      return coords; // Already in WGS84
+    }
+    const [lng, lat] = proj4('EPSG:3067', 'EPSG:4326', [x, y]);
+    return [lng, lat];
+  }
+  // Handle nested arrays recursively
+  return coords.map(c => transformCoordinates(c as any)) as any;
+}
 
 interface ParseMessage {
   type: 'parse';
@@ -204,6 +224,9 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const row = stmt.getAsObject();
     const geomWKB = row.geom as Uint8Array;
     const geometry = parseWKB(geomWKB);
+
+    // Transform coordinates from ETRS-TM35FIN to WGS84
+    geometry.coordinates = transformCoordinates(geometry.coordinates);
     
     if (results.length === 0) {
       console.log('First geometry sample:', JSON.stringify(geometry));
@@ -265,6 +288,10 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
     const row = stmt.getAsObject();
     const geomWKB = row.geom as Uint8Array;
     const geometry = parseWKB(geomWKB);
+
+    // Transform coordinates
+    geometry.coordinates = transformCoordinates(geometry.coordinates);
+
     const uniqueId = row.id || row.fid || results.length;
     const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;
     const vlmlajityyppi = row.VLMLAJITYYPPI as number;

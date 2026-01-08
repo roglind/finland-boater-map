@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-MORE-FIX-ORDER
+// WKB Parser - Build: 2025-01-07-17-10-MORE-FIX-ORDER1
 import initSqlJs, { Database } from 'sql.js';
 import proj4 from 'proj4';
 import type { RestrictionArea, TrafficSign } from '../types';
@@ -13,12 +13,32 @@ function transformCoordinates(coords: number[]): number[] {
   if (coords.length === 2) {
     // Single point [x, y] -> [lng, lat]
     const [x, y] = coords;
+    
+    // Check if input is valid
+    if (!isFinite(x) || !isFinite(y)) {
+      console.error('Invalid input coordinates:', x, y);
+      return [0, 0]; // Return null island as fallback
+    }
+    
     // Check if already in WGS84 range
     if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
       return coords; // Already in WGS84
     }
-    const [lng, lat] = proj4('EPSG:3067', 'EPSG:4326', [x, y]);
-    return [lng, lat];
+    
+    try {
+      const [lng, lat] = proj4('EPSG:3067', 'EPSG:4326', [x, y]);
+      
+      // Validate output
+      if (!isFinite(lng) || !isFinite(lat)) {
+        console.error('Transform produced invalid coordinates:', { input: [x, y], output: [lng, lat] });
+        return [0, 0]; // Return null island as fallback
+      }
+      
+      return [lng, lat];
+    } catch (error) {
+      console.error('Transform error for coordinates:', x, y, error);
+      return [0, 0]; // Return null island as fallback
+    }
   }
   // Handle nested arrays recursively
   return coords.map(c => transformCoordinates(c as any)) as any;

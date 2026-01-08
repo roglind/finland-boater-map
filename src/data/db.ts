@@ -1,3 +1,4 @@
+//Fix path
 import Dexie, { Table } from 'dexie';
 import type { RestrictionArea, TrafficSign } from '../types';
 

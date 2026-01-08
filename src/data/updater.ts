@@ -1,3 +1,4 @@
+//Add logging
 import { db, setLastUpdated, getMeta, setMeta } from './db';
 import type { RestrictionArea, TrafficSign, UpdateStatus } from '../types';
 
@@ -36,7 +37,20 @@ export class DataUpdater {
         rajoitusPromise,
         vesiliikennePromise
       ]);
-      
+
+      // If data not modified, we're done
+      if (!rajoitusBuffer || !vesiliikenneBuffer) {
+        this.updateStatus({ 
+          isUpdating: false, 
+          progress: 100, 
+          message: 'Data jo ajan tasalla!' 
+        });
+        setTimeout(() => {
+          this.updateStatus({ progress: 0, message: '' });
+        }, 3000);
+       return;
+      }
+
       // Parse restriction areas
       this.updateStatus({ progress: 50, message: 'Käsitellään rajoitusalueet...' });
       const restrictionAreas = await this.parseInWorker(rajoitusBuffer, 'rajoitus') as RestrictionArea[];
@@ -76,7 +90,7 @@ export class DataUpdater {
     }
   }
   
-  private async fetchFile(url: string, type: 'rajoitus' | 'vesiliikenne'): Promise<ArrayBuffer> {
+  private async fetchFile(url: string, type: 'rajoitus' | 'vesiliikenne'): Promise<ArrayBuffer | null> {
     const etag = await getMeta(`${type}_etag`);
     
     const headers: HeadersInit = {};

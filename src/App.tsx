@@ -1,3 +1,4 @@
+// Add logging
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -76,12 +77,19 @@ function App() {
   };
   
   const handleUpdate = async () => {
-    if (updaterRef.current) {
-      await updaterRef.current.updateData();
-      await loadDataFromDB();
+    console.log('=== UPDATE STARTED ===');
+    try {
+      console.log('Calling updater.updateData()...');
+      await updater.updateData();
+      console.log('=== UPDATE COMPLETED SUCCESSFULLY ===');
+      alert('Päivitys valmis!');
+    } catch (error) {
+      console.error('=== UPDATE FAILED ===');
+      console.error('Update failed:', error);
+      alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
-  };
-  
+  };  
+
   // Start geolocation watch
   useEffect(() => {
     if (!navigator.geolocation) {

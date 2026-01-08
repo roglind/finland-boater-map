@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-MORE-DEBUG2
+// WKB Parser - Build: 2025-01-07-17-10-MORE-FIX-ORDER
 import initSqlJs, { Database } from 'sql.js';
 import proj4 from 'proj4';
 import type { RestrictionArea, TrafficSign } from '../types';
@@ -227,11 +227,6 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
 
     // Transform coordinates from ETRS-TM35FIN to WGS84
     geometry.coordinates = transformCoordinates(geometry.coordinates);
-    
-    if (results.length === 0) {
-      console.log('First geometry sample:', JSON.stringify(geometry));
-      console.log('First bbox sample:', bboxArr);
-    }
 
     // Parse SUURUUS for numeric value
     const uniqueId = row.id || row.fid || results.length;
@@ -239,13 +234,17 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const suuruusRaw = (row.SUURUUS as string) || '';
     const suuruusMatch = suuruusRaw.match(/(\d+)/);
     const suuruusKmh = suuruusMatch ? parseInt(suuruusMatch[1], 10) : undefined;
-    
+
     // Calculate bbox
     const feat = geometry.type === 'Polygon' 
       ? polygon(geometry.coordinates)
       : multiPolygon(geometry.coordinates);
     const bboxArr = bbox(feat) as [number, number, number, number];
-    
+
+    if (results.length === 0) {
+      console.log('First geometry sample:', JSON.stringify(geometry));
+      console.log('First bbox sample:', bboxArr);
+    }    
     results.push({
       id: safeId,
       rajoitustyyppi: (row.RAJOITUSTYYPPI as string) || '',

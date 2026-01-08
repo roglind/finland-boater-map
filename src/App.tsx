@@ -1,4 +1,4 @@
-// Add logging
+// Fix variables
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -24,7 +24,18 @@ function App() {
     progress: 0,
     message: ''
   });
+  const updaterRef = useRef<DataUpdater | null>(null);
+
+  useEffect(() => {
+    if (!updaterRef.current) {
+      updaterRef.current = new DataUpdater(setUpdateStatus);
+    }
   
+    return () => {
+      updaterRef.current?.cleanup();
+    };
+  }, []);
+
   const [filters, setFilters] = useState<AppFilters>({
     ammattiliikenne: true,
     vesiskootteri: true,
@@ -80,7 +91,7 @@ function App() {
     console.log('=== UPDATE STARTED ===');
     try {
       console.log('Calling updater.updateData()...');
-      await updater.updateData();
+      await updaterRef.current?.updateData();
       console.log('=== UPDATE COMPLETED SUCCESSFULLY ===');
       alert('Päivitys valmis!');
     } catch (error) {

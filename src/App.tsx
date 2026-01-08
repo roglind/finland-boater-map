@@ -1,4 +1,4 @@
-// Fix database logging
+// Add console stuff
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -83,6 +83,13 @@ function App() {
           spatialIndex.buildSignIndex(signs);
           setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
           setDataLoaded(true);
+          // Force immediate evaluation if we have a position
+          if (lastPositionRef.current) {
+            console.log('🔄 Forcing initial evaluation with current position');
+            // Reset last eval time to force evaluation
+            lastEvalRef.current = 0;
+            evaluatePosition(lastPositionRef.current);
+          }
           console.log('Data loaded and indexed successfully!');
         } else {
           console.log('No data in IndexedDB yet');
@@ -175,6 +182,8 @@ function App() {
     }
   
     // Check if moved more than 10m
+    // TEMPORARILY DISABLED - for testing
+    /*
     if (lastPositionRef.current) {
       const lastPos = lastPositionRef.current;
       const latDiff = Math.abs(position.lat - lastPos.lat);
@@ -186,6 +195,7 @@ function App() {
         return;
       }
     }
+    */
   
     lastEvalRef.current = now;
     console.log('✅ Evaluating...');

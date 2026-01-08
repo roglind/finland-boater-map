@@ -1,4 +1,4 @@
-// Add console stuff
+// Add debug stuff
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -81,6 +81,15 @@ function App() {
           console.log('Building spatial indexes...');
           spatialIndex.buildAreaIndex(areas);
           spatialIndex.buildSignIndex(signs);
+          // Debug: Check what was indexed
+          console.log('Sample area bbox:', areas[0]?.bbox);
+          console.log('Sample area geometry:', areas[0]?.geometry);
+          console.log('Sample sign coordinates:', signs[0]?.geometry?.coordinates);
+
+          // Try searching in a much wider area
+          const testCandidates = spatialIndex.getCandidateAreas(24.925, 60.247, 1.0);
+          console.log('Test search (radius 1.0 deg):', testCandidates.length, 'candidates');
+
           setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
           setDataLoaded(true);
           // Force immediate evaluation if we have a position

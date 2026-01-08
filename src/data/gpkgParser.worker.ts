@@ -1,4 +1,4 @@
-// WKB Parser - Build: 2025-01-07-17-10-CORRECT-SPELLING
+// WKB Parser - Build: 2025-01-07-17-10-MORE-DEBUG
 import initSqlJs, { Database } from 'sql.js';
 import type { RestrictionArea, TrafficSign } from '../types';
 import bbox from '@turf/bbox';
@@ -205,6 +205,11 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     const geomWKB = row.geom as Uint8Array;
     const geometry = parseWKB(geomWKB);
     
+    if (results.length === 0) {
+      console.log('First geometry sample:', JSON.stringify(geometry));
+      console.log('First bbox sample:', bboxArr);
+    }
+
     // Parse SUURUUS for numeric value
     const uniqueId = row.id || row.fid || results.length;
     const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;

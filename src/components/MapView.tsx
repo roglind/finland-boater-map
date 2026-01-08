@@ -1,3 +1,4 @@
+// Add logging
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, ApplicableRestriction, NearbySign } from '../types';
@@ -10,6 +11,12 @@ interface MapViewProps {
 }
 
 function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
+  console.log('🗺️ MapView render:', {
+    position: boatPosition,
+    restrictionsCount: restrictions.length,
+    signsCount: signs.length,
+    restrictions: restrictions
+  });
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);

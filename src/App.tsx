@@ -1,4 +1,4 @@
-// Fix variables again
+// Fix database
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -70,35 +70,47 @@ function App() {
     loadDataFromDB();
   }, []);
   
-  const loadDataFromDB = async () => {
-    try {
-      const areas = await db.restriction_areas.toArray();
-      const signs = await db.traffic_signs.toArray();
-      
-      if (areas.length > 0 && signs.length > 0) {
-        spatialIndex.buildAreaIndex(areas);
-        spatialIndex.buildSignIndex(signs);
-        setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
-        setDataLoaded(true);
+    const loadDataFromDB = async () => {
+      try {
+        console.log('Loading data from IndexedDB...');
+        const areas = await db.restriction_areas.toArray();
+        const signs = await db.traffic_signs.toArray();
+        console.log('Loaded from DB:', { areas: areas.length, signs: signs.length });
+    
+        if (areas.length > 0 && signs.length > 0) {
+          console.log('Building spatial indexes...');
+          spatialIndex.buildAreaIndex(areas);
+          spatialIndex.buildSignIndex(signs);
+          setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
+          setDataLoaded(true);
+          console.log('Data loaded and indexed successfully!');
+        } else {
+          console.log('No data in IndexedDB yet');
+        }
+      } catch (error) {
+        console.error('Failed to load data from IndexedDB:', error);
       }
-    } catch (error) {
-      console.error('Failed to load data from IndexedDB:', error);
-    }
-  };
+    };
   
-  const handleUpdate = async () => {
-    console.log('=== UPDATE STARTED ===');
-    try {
-      console.log('Calling updater.updateData()...');
-      await updaterRef.current?.updateData();
-      console.log('=== UPDATE COMPLETED SUCCESSFULLY ===');
-      alert('Päivitys valmis!');
-    } catch (error) {
-      console.error('=== UPDATE FAILED ===');
-      console.error('Update failed:', error);
-      alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };  
+    const handleUpdate = async () => {
+      console.log('=== UPDATE STARTED ===');
+      try {
+        console.log('Calling updater.updateData()...');
+        await updaterRef.current?.updateData();
+        console.log('=== UPDATE COMPLETED SUCCESSFULLY ===');
+    
+        // Reload data from IndexedDB
+        console.log('Reloading data from IndexedDB...');
+        await loadDataFromDB();
+        console.log('Data reloaded!');
+    
+        alert('Päivitys valmis! Ladattu ' + (await db.restriction_areas.count()) + ' rajoitusaluetta ja ' + (await db.traffic_signs.count()) + ' merkkiä.');
+      } catch (error) {
+        console.error('=== UPDATE FAILED ===');
+        console.error('Update failed:', error);
+        alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      }
+    };
 
   // Start geolocation watch
   useEffect(() => {

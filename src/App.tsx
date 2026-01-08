@@ -1,4 +1,4 @@
-// Fix variables
+// Fix variables again
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -24,7 +24,6 @@ function App() {
     progress: 0,
     message: ''
   });
-  const updaterRef = useRef<DataUpdater | null>(null);
 
   useEffect(() => {
     if (!updaterRef.current) {

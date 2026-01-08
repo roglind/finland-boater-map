@@ -1,4 +1,4 @@
-// Fix database
+// Fix database logging
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -154,46 +154,63 @@ function App() {
   }, [filters, dataLoaded]);
   
   const evaluatePosition = useCallback((position: BoatPosition) => {
-    if (!dataLoaded) return;
-    
-    const now = Date.now();
-    const timeSinceLastEval = now - lastEvalRef.current;
-    
-    // Throttle evaluation to once per second
-    if (timeSinceLastEval < 1000) {
+    console.log('🎯 evaluatePosition called:', {
+      lat: position.lat,
+      lng: position.lng,
+      dataLoaded: dataLoaded
+    });
+  
+    if (!dataLoaded) {
+      console.log('⚠️ Data not loaded yet, skipping evaluation');
       return;
     }
-    
-    // Check if moved more than 10m (approximate)
+  
+    const now = Date.now();
+    const timeSinceLastEval = now - lastEvalRef.current;
+  
+    // Throttle evaluation to once per second
+    if (timeSinceLastEval < 1000) {
+      console.log('⏱️ Throttled (too soon)');
+      return;
+    }
+  
+    // Check if moved more than 10m
     if (lastPositionRef.current) {
       const lastPos = lastPositionRef.current;
       const latDiff = Math.abs(position.lat - lastPos.lat);
       const lngDiff = Math.abs(position.lng - lastPos.lng);
       const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
-      
+    
       if (movedMeters < 10) {
+        console.log('📍 Haven\'t moved enough:', movedMeters.toFixed(2), 'm');
         return;
       }
     }
-    
+  
     lastEvalRef.current = now;
-    
+    console.log('✅ Evaluating...');
+  
     // Get candidate areas from spatial index
     const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.05);
-    
+    console.log('📦 Candidate areas from spatial index:', candidateAreas.length);
+  
     // Filter to applicable restrictions
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
+    console.log('✓ Applicable restrictions:', applicable.length);
     setApplicableRestrictions(applicable);
-    
+  
     // Get nearby signs
     const candidateSigns = spatialIndex.getNearbySignsInRadius(
       position.lng, 
       position.lat, 
       filters.nearbyRadius
     );
+    console.log('🚩 Candidate signs:', candidateSigns.length);
+  
     const nearby = getNearbySignsWithDistance(candidateSigns, position, filters);
-    setNearbySigns(nearby.slice(0, 10)); // Limit to 10 closest
-    
+    console.log('✓ Nearby signs after filtering:', nearby.length);
+    setNearbySigns(nearby.slice(0, 10));
+  
   }, [filters, dataLoaded]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {

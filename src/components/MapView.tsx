@@ -1,4 +1,4 @@
-// Display all areas5
+// Display all areas6
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -145,98 +145,95 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
   }, [signs]);
   console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas useEffect');  
 
-  // Display ALL restriction areas
-  useEffect(() => {
+  // Display ALL restriction areas - called directly
+  const displayAllAreas = () => {
+    console.log('🟢 displayAllAreas function called');
+  
     if (!mapRef.current) {
-      console.log('🗺️ All-areas: No map ref');
+      console.log('🟢 No map ref, trying again in 1 second...');
+      setTimeout(displayAllAreas, 1000);
       return;
     }
 
     const map = mapRef.current;
-    console.log('🗺️ All-areas: Map ref exists');
+    console.log('🟢 Map ref exists, checking if loaded:', map.loaded());
 
-    function addLayers() {
-      console.log('🗺️ All-areas: Adding layers, map loaded:', map.loaded());
-    
-      // Remove existing layers
-      if (map.getLayer('all-restrictions-fill')) {
-        console.log('🗺️ All-areas: Removing old fill layer');
-        map.removeLayer('all-restrictions-fill');
-      }
-      if (map.getLayer('all-restrictions-line')) {
-        console.log('🗺️ All-areas: Removing old line layer');
-        map.removeLayer('all-restrictions-line');
-      }
-      if (map.getSource('all-restrictions')) {
-        console.log('🗺️ All-areas: Removing old source');
-        map.removeSource('all-restrictions');
-      }
-
-      // Load and display ALL restriction areas
-      console.log('🗺️ All-areas: Loading from IndexedDB...'); 
-      db.restriction_areas.toArray().then(allAreas => {
-        console.log('🗺️ All-areas: Loaded', allAreas.length, 'areas');
-      
-        if (allAreas.length === 0) {
-          console.log('🗺️ All-areas: No areas to display');
-          return;
-        }
-      
-        const geojson: GeoJSON.FeatureCollection = {
-          type: 'FeatureCollection',
-          features: allAreas.map(r => ({
-            type: 'Feature',
-            properties: { id: r.id },
-            geometry: r.geometry
-          }))
-        };
-    
-        console.log('🗺️ All-areas: Adding source with', geojson.features.length, 'features');
-        map.addSource('all-restrictions', {
-          type: 'geojson',
-          data: geojson
-        });
-    
-        console.log('🗺️ All-areas: Adding fill layer');
-        map.addLayer({
-          id: 'all-restrictions-fill',
-          type: 'fill',
-          source: 'all-restrictions',
-          paint: {
-            'fill-color': '#3b82f6',
-            'fill-opacity': 0.3
-          }
-        });
-    
-        console.log('🗺️ All-areas: Adding line layer');
-        map.addLayer({
-          id: 'all-restrictions-line',
-          type: 'line',
-          source: 'all-restrictions',
-          paint: {
-            'line-color': '#2563eb',
-            'line-width': 2
-          }
-        });
-      
-        console.log('🗺️ All-areas: Layers added successfully!');
-    }).catch(error => {
-        console.error('🗺️ All-areas: Error loading:', error);
-      });
-    }
-
-    // Wait for map to load before adding layers
-    if (map.loaded()) {
-      console.log('🗺️ All-areas: Map already loaded');
-      addLayers();
-    } else {
-      console.log('🗺️ All-areas: Waiting for map to load...');
+    if (!map.loaded()) {
+      console.log('🟢 Map not loaded, waiting...');
       map.once('load', () => {
-        console.log('🗺️ All-areas: Map load event fired');
-        addLayers();
+        console.log('🟢 Map load event fired');
+        addAllAreasToMap(map);
       });
+    } else {
+      console.log('🟢 Map already loaded');
+      addAllAreasToMap(map);
     }
-  }, [mapRef.current]); 
+  };
+
+  const addAllAreasToMap = (map: maplibregl.Map) => {
+    console.log('🟢 Adding all areas to map...');
+  
+    db.restriction_areas.toArray().then(allAreas => {
+      console.log('🟢 Loaded', allAreas.length, 'areas from DB');
+    
+      if (allAreas.length === 0) {
+        console.log('🟢 No areas to display');
+        return;
+      }
+    
+      // Remove old layers if they exist
+      try {
+        if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
+        if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
+        if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
+      } catch (e) {
+        // OK if they don't exist
+      }
+    
+     const geojson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: allAreas.map(r => ({
+          type: 'Feature',
+          properties: { id: r.id },
+          geometry: r.geometry
+        }))
+      };
+  
+      console.log('🟢 Adding source with', geojson.features.length, 'features');
+      map.addSource('all-restrictions', {
+        type: 'geojson',
+        data: geojson
+      });
+  
+      console.log('🟢 Adding layers (RED color, high opacity)');
+      map.addLayer({
+        id: 'all-restrictions-fill',
+        type: 'fill',
+        source: 'all-restrictions',
+        paint: {
+          'fill-color': '#ff0000',
+          'fill-opacity': 0.5
+        }
+      });
+  
+      map.addLayer({
+        id: 'all-restrictions-line',
+        type: 'line',
+        source: 'all-restrictions',
+        paint: {
+          'line-color': '#ff0000',
+          'line-width': 3
+        }
+      });
+    
+      console.log('🟢 SUCCESS! Red polygons should be visible now!');
+    }).catch(error => {
+      console.error('🟢 Error loading areas:', error);
+    });
+  };
+
+  // Call it on every render
+  displayAllAreas();
  
   return (
     <div ref={mapContainerRef} className="map-container" />

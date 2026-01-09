@@ -1,4 +1,5 @@
-// Add logging
+// Display all areas1
+import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, ApplicableRestriction, NearbySign } from '../types';
@@ -143,74 +144,55 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
     });
   }, [signs]);
   
-  // Add restriction polygons as layers
+  // For development: show all areas if no applicable restrictions
+  // Remove this later for production
   useEffect(() => {
     if (!mapRef.current) return;
-    
+  
     const map = mapRef.current;
+  
+    // Remove existing layers
+    if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
+    if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
+    if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
+  
+    // Load and display ALL restriction areas
+    db.restriction_areas.toArray().then(allAreas => {
+      const geojson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: allAreas.map(r => ({
+          type: 'Feature',
+          properties: { id: r.id },
+          geometry: r.geometry
+        }))
+      };
     
-    // Remove existing restriction layers
-    if (map.getLayer('restrictions-fill')) {
-      map.removeLayer('restrictions-fill');
-    }
-    if (map.getLayer('restrictions-line')) {
-      map.removeLayer('restrictions-line');
-    }
-    if (map.getSource('restrictions')) {
-      map.removeSource('restrictions');
-    }
+      map.addSource('all-restrictions', {
+        type: 'geojson',
+        data: geojson
+      });
     
-    if (restrictions.length === 0) return;
+      map.addLayer({
+        id: 'all-restrictions-fill',
+        type: 'fill',
+        source: 'all-restrictions',
+        paint: {
+          'fill-color': '#3b82f6',
+          'fill-opacity': 0.2
+        }
+      });
     
-    // Create GeoJSON from restrictions
-    const geojson: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: restrictions.map(r => ({
-        type: 'Feature',
-        properties: {
-          id: r.id,
-          isPrimary: r.isPrimary || false,
-          suuruusKmh: r.suuruusKmh
-        },
-        geometry: r.geometry
-      }))
-    };
-    
-    map.addSource('restrictions', {
-      type: 'geojson',
-      data: geojson
+      map.addLayer({
+        id: 'all-restrictions-line',
+        type: 'line',
+        source: 'all-restrictions',
+        paint: {
+          'fill-color': '#2563eb',
+          'line-width': 1
+        }
+      });
     });
-    
-    map.addLayer({
-      id: 'restrictions-fill',
-      type: 'fill',
-      source: 'restrictions',
-      paint: {
-        'fill-color': [
-          'case',
-          ['get', 'isPrimary'],
-          '#ef4444',
-          '#f97316'
-        ],
-        'fill-opacity': 0.3
-      }
-    });
-    
-    map.addLayer({
-      id: 'restrictions-line',
-      type: 'line',
-      source: 'restrictions',
-      paint: {
-        'line-color': [
-          'case',
-          ['get', 'isPrimary'],
-          '#dc2626',
-          '#ea580c'
-        ],
-        'line-width': 2
-      }
-    });
-  }, [restrictions]);
+  }, []);
   
   return (
     <div ref={mapContainerRef} className="map-container" />

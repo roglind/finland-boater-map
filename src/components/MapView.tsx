@@ -1,4 +1,4 @@
-// Display all areas2
+// Display all areas4
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -235,7 +235,7 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
         addLayers();
       });
     }
-  }, []); 
+  }, [mapRef.current]); 
  
   return (
     <div ref={mapContainerRef} className="map-container" />

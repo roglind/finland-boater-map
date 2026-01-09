@@ -1,4 +1,4 @@
-// Display all areas4
+// Display all areas5
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -143,7 +143,8 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
       signMarkersRef.current.push(marker);
     });
   }, [signs]);
-  
+  console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas useEffect');  
+
   // Display ALL restriction areas
   useEffect(() => {
     if (!mapRef.current) {

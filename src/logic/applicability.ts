@@ -1,4 +1,4 @@
-// ADD DEBUG2
+// ADD DEBUG3
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import type { RestrictionArea, ApplicableRestriction, AppFilters, BoatPosition } from '../types';
@@ -13,14 +13,20 @@ export function isRestrictionApplicable(
   const pt = point([position.lng, position.lat]);
   const isInside = booleanPointInPolygon(pt, restriction.geometry as any);
   
+  console.log(`Checking restriction ${restriction.id}: inside=${isInside}`);
+  
   if (!isInside) {
+    console.log(`  ❌ Not inside polygon`);
     return false;
   }
+  
+  console.log(`  ✅ Inside polygon`);
   
   // Check date validity
   if (restriction.alkuPvm) {
     const startDate = new Date(restriction.alkuPvm);
     if (now < startDate) {
+      console.log(`  ❌ Too early (starts ${restriction.alkuPvm})`);
       return false;
     }
   }
@@ -28,6 +34,7 @@ export function isRestrictionApplicable(
   if (restriction.loppuPvm) {
     const endDate = new Date(restriction.loppuPvm);
     if (now > endDate) {
+      console.log(`  ❌ Expired (ended ${restriction.loppuPvm})`);
       return false;
     }
   }
@@ -36,6 +43,7 @@ export function isRestrictionApplicable(
   if (!filters.ammattiliikenne && restriction.poikkeus) {
     const poikkeusLower = restriction.poikkeus.toLowerCase();
     if (poikkeusLower.includes('huvi')) {
+      console.log(`  ❌ Filtered by ammattiliikenne`);
       return false;
     }
   }
@@ -44,10 +52,12 @@ export function isRestrictionApplicable(
   if (!filters.vesiskootteri && restriction.rajoitustyyppi) {
     const rajoitustyyppiLower = restriction.rajoitustyyppi.toLowerCase();
     if (rajoitustyyppiLower.includes('vesiskootterilla')) {
+      console.log(`  ❌ Filtered by vesiskootteri`);
       return false;
     }
   }
   
+  console.log(`  ✅ APPLICABLE!`);
   return true;
 }
 

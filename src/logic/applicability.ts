@@ -1,4 +1,4 @@
-// ADD DEBUG
+// ADD DEBUG2
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import type { RestrictionArea, ApplicableRestriction, AppFilters, BoatPosition } from '../types';
@@ -56,8 +56,8 @@ export function getApplicableRestrictions(
   position: BoatPosition,
   filters: AppFilters
 ): ApplicableRestriction[] {
-  console.log('🔍 getApplicableRestrictions called with', candidateAreas.length, 'candidates');
-  console.log('Sample candidate:', candidateAreas[0]);
+  console.log('🔍 getApplicableRestrictions called with', restrictions.length, 'candidates');
+  console.log('Sample candidate:', restrictions[0]);
   console.log('Position:', position);
   console.log('Filters:', filters);
   

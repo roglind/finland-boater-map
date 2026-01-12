@@ -1,4 +1,4 @@
-// Display all areas6
+// Add debugging
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -173,32 +173,69 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
   const addAllAreasToMap = (map: maplibregl.Map) => {
     console.log('🟢 Adding all areas to map...');
   
-    db.restriction_areas.toArray().then(allAreas => {
-      console.log('🟢 Loaded', allAreas.length, 'areas from DB');
+    try {
+      db.restriction_areas.toArray().then(allAreas => {
+        console.log('🟢 Loaded', allAreas.length, 'areas from DB');
+      
+        if (allAreas.length === 0) {
+          console.log('🟢 No areas to display');
+          return;
+        }
+      
+        // Remove old layers if they exist
+        try {
+          if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
+          if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
+          if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
+        } catch (e) {
+          console.log('🟢 Removed old layers (or they didnt exist)');
+        }
+      
+        const geojson: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features: allAreas.map(r => ({
+            type: 'Feature',
+            properties: { id: r.id },
+            geometry: r.geometry
+          }))
+        };
     
-      if (allAreas.length === 0) {
-        console.log('🟢 No areas to display');
-        return;
-      }
+        console.log('🟢 Adding source with', geojson.features.length, 'features');
+        map.addSource('all-restrictions', {
+          type: 'geojson',
+          data: geojson
+        });
     
-      // Remove old layers if they exist
-      try {
-        if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
-        if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
-        if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
-      } catch (e) {
-        // OK if they don't exist
-      }
+        console.log('🟢 Adding layers (RED color, high opacity)');
+        map.addLayer({
+          id: 'all-restrictions-fill',
+          type: 'fill',
+          source: 'all-restrictions',
+          paint: {
+            'fill-color': '#ff0000',
+            'fill-opacity': 0.5
+          }
+        });
     
-     const geojson: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: allAreas.map(r => ({
-          type: 'Feature',
-          properties: { id: r.id },
-          geometry: r.geometry
-        }))
-      };
-  
+        map.addLayer({
+          id: 'all-restrictions-line',
+          type: 'line',
+          source: 'all-restrictions',
+          paint: {
+            'line-color': '#ff0000',
+            'line-width': 3
+          }
+        });
+        
+        console.log('🟢 SUCCESS! Red polygons should be visible now!');
+      }).catch(error => {
+        console.error('🟢 Promise error loading areas:', error);
+        console.error('🟢 Error details:', JSON.stringify(error));
+      });
+    } catch (error) {
+      console.error('🟢 Try-catch error:', error);
+    }
+  };  
       console.log('🟢 Adding source with', geojson.features.length, 'features');
       map.addSource('all-restrictions', {
         type: 'geojson',

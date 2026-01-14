@@ -1,4 +1,4 @@
-// Fix debugging errors
+// Fix debugging errors try 2
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -15,18 +15,18 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
   console.log('🗺️ MapView render:', {
     position: boatPosition,
     restrictionsCount: restrictions.length,
-    signsCount: signs.length,
-    restrictions: restrictions
+    signsCount: signs.length
   });
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
-  
-  // Initialize map
+
+  // Initialize map (once)
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: {
@@ -53,32 +53,41 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
       zoom: 8,
       attributionControl: true
     });
-    
+
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    
+
     mapRef.current = map;
-    
+
+    // Try to add restriction areas (function waits for map load itself)
+    displayAllAreas();
+
     return () => {
+      // cleanup markers
+      markerRef.current?.remove();
+      signMarkersRef.current.forEach(m => m.remove());
+      // remove map
       map.remove();
+      mapRef.current = null;
     };
-  }, []);
-  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once
+
   // Update boat position marker
   useEffect(() => {
     if (!mapRef.current || !boatPosition) return;
-    
+
     const map = mapRef.current;
-    
+
     if (!markerRef.current) {
       // Create boat marker
       const el = document.createElement('div');
       el.className = 'boat-marker';
       el.innerHTML = '🚤';
-      
+
       markerRef.current = new maplibregl.Marker({ element: el })
         .setLngLat([boatPosition.lng, boatPosition.lat])
         .addTo(map);
-      
+
       // Center map on first position
       map.flyTo({
         center: [boatPosition.lng, boatPosition.lat],
@@ -89,29 +98,29 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
       // Update existing marker
       markerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
     }
-    
+
     // Update heading rotation if available
     if (boatPosition.heading != null && markerRef.current) {
       const el = markerRef.current.getElement();
       el.style.transform = `rotate(${boatPosition.heading}deg)`;
     }
   }, [boatPosition]);
-  
+
   // Update sign markers
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     const map = mapRef.current;
-    
+
     // Remove old markers
     signMarkersRef.current.forEach(marker => marker.remove());
     signMarkersRef.current = [];
-    
+
     // Add new markers
     signs.forEach(sign => {
       const el = document.createElement('div');
       el.className = 'sign-marker';
-      
+
       const img = document.createElement('img');
       img.src = sign.iconUrl;
       img.alt = sign.nimiFi || 'Merkki';
@@ -123,32 +132,32 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
           img.src = '/icons/merkki_default.png';
         };
       };
-      
+
       el.appendChild(img);
-      
+
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(sign.geometry.coordinates as [number, number])
         .setPopup(
-          new maplibregl.Popup({ offset: 25 })
-            .setHTML(`
-              <div class="sign-popup">
-                <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
-                ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
-                <p class="distance">${sign.distance} m</p>
-              </div>
-            `)
+          new maplibregl.Popup({ offset: 25 }).setHTML(`
+            <div class="sign-popup">
+              <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
+              ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
+              <p class="distance">${sign.distance} m</p>
+            </div>
+          `)
         )
         .addTo(map);
-      
+
       signMarkersRef.current.push(marker);
     });
   }, [signs]);
-  console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas useEffect');  
+
+  console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas useEffect');
 
   // Display ALL restriction areas - called directly
   const displayAllAreas = () => {
     console.log('🟢 displayAllAreas function called');
-  
+
     if (!mapRef.current) {
       console.log('🟢 No map ref, trying again in 1 second...');
       setTimeout(displayAllAreas, 1000);
@@ -172,17 +181,18 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
 
   const addAllAreasToMap = (map: maplibregl.Map) => {
     console.log('🟢 Adding all areas to map...');
-  
-    try {
-      db.restriction_areas.toArray().then(allAreas => {
+
+    db.restriction_areas
+      .toArray()
+      .then(allAreas => {
         console.log('🟢 Loaded', allAreas.length, 'areas from DB');
-      
+
         if (allAreas.length === 0) {
           console.log('🟢 No areas to display');
           return;
         }
-      
-        // Remove old layers if they exist
+
+        // Remove old layers/sources if they exist
         try {
           if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
           if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
@@ -190,7 +200,7 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
         } catch (e) {
           console.log('🟢 Removed old layers (or they didnt exist)');
         }
-      
+
         const geojson: GeoJSON.FeatureCollection = {
           type: 'FeatureCollection',
           features: allAreas.map(r => ({
@@ -199,13 +209,13 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             geometry: r.geometry
           }))
         };
-    
+
         console.log('🟢 Adding source with', geojson.features.length, 'features');
         map.addSource('all-restrictions', {
           type: 'geojson',
           data: geojson
         });
-    
+
         console.log('🟢 Adding layers (RED color, high opacity)');
         map.addLayer({
           id: 'all-restrictions-fill',
@@ -216,7 +226,7 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             'fill-opacity': 0.5
           }
         });
-    
+
         map.addLayer({
           id: 'all-restrictions-line',
           type: 'line',
@@ -226,55 +236,19 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             'line-width': 3
           }
         });
-        
+
         console.log('🟢 SUCCESS! Red polygons should be visible now!');
-      }).catch(error => {
-        console.error('🟢 Promise error loading areas:', error);
-        console.error('🟢 Error details:', JSON.stringify(error));
+      })
+      .catch(error => {
+        console.error('🟢 Error loading areas:', error);
       });
-    } catch (error) {
-      console.error('🟢 Try-catch error:', error);
-    }
-  };  
-      console.log('🟢 Adding source with', geojson.features.length, 'features');
-      map.addSource('all-restrictions', {
-        type: 'geojson',
-        data: geojson
-      });
-  
-      console.log('🟢 Adding layers (RED color, high opacity)');
-      map.addLayer({
-        id: 'all-restrictions-fill',
-        type: 'fill',
-        source: 'all-restrictions',
-        paint: {
-          'fill-color': '#ff0000',
-          'fill-opacity': 0.5
-        }
-      });
-  
-      map.addLayer({
-        id: 'all-restrictions-line',
-        type: 'line',
-        source: 'all-restrictions',
-        paint: {
-          'line-color': '#ff0000',
-          'line-width': 3
-        }
-      });
-    
-      console.log('🟢 SUCCESS! Red polygons should be visible now!');
-    }).catch(error => {
-      console.error('🟢 Error loading areas:', error);
-    });
   };
 
-  // Call it on every render
+  // Call it on every render attempt (it will early-return / retry if map not ready)
+  // (You can change this to a useEffect if you prefer a different invocation pattern.)
   displayAllAreas();
- 
-  return (
-    <div ref={mapContainerRef} className="map-container" />
-  );
+
+  return <div ref={mapContainerRef} className="map-container" />;
 }
 
 export default MapView;

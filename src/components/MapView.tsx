@@ -1,4 +1,4 @@
-// Fix errors 4
+// MapView component with all-areas display
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -152,7 +152,7 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
     });
   }, [signs]);
 
-  console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas useEffect');
+  console.log('🔴🔴🔴 CODE EXISTS - About to define all-areas function');
 
   // Display ALL restriction areas - called directly
   const displayAllAreas = () => {
@@ -275,43 +275,8 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
         console.error('🟢 Error loading areas:', error);
       });
   };
-        console.log('🟢 Created GeoJSON with', geojson.features.length, 'valid features');
-        console.log('🟢 Adding source with', geojson.features.length, 'features');
-        map.addSource('all-restrictions', {
-          type: 'geojson',
-          data: geojson
-        });
-
-        console.log('🟢 Adding layers (RED color, high opacity)');
-        map.addLayer({
-          id: 'all-restrictions-fill',
-          type: 'fill',
-          source: 'all-restrictions',
-          paint: {
-            'fill-color': '#ff0000',
-            'fill-opacity': 0.5
-          }
-        });
-
-        map.addLayer({
-          id: 'all-restrictions-line',
-          type: 'line',
-          source: 'all-restrictions',
-          paint: {
-            'line-color': '#ff0000',
-            'line-width': 3
-          }
-        });
-
-        console.log('🟢 SUCCESS! Red polygons should be visible now!');
-      })
-      .catch(error => {
-        console.error('🟢 Error loading areas:', error);
-      });
-  };
 
   // Call it on every render attempt (it will early-return / retry if map not ready)
-  // (You can change this to a useEffect if you prefer a different invocation pattern.)
   displayAllAreas();
 
   return <div ref={mapContainerRef} className="map-container" />;

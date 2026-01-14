@@ -1,4 +1,4 @@
-// Add debugging
+// Fix debugging errors
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';

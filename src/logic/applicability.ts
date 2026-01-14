@@ -1,4 +1,4 @@
-// ADD DEBUG3
+// ADD DEBUG4
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import type { RestrictionArea, ApplicableRestriction, AppFilters, BoatPosition } from '../types';
@@ -38,7 +38,10 @@ export function isRestrictionApplicable(
       return false;
     }
   }
-  
+  console.log(`  Filter check: ammattiliikenne=${filters.ammattiliikenne}, vesiskootteri=${filters.vesiskootteri}`);
+  console.log(`  Restriction data: rajoitustyyppi="${restriction.rajoitustyyppi}", poikkeus="${restriction.poikkeus}"`);
+
+
   // Apply Ammattiliikenne filter
   if (!filters.ammattiliikenne && restriction.poikkeus) {
     const poikkeusLower = restriction.poikkeus.toLowerCase();

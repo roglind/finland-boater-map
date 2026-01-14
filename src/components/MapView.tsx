@@ -1,4 +1,4 @@
-// MapView component with all-areas display
+// MapView component with all-areas display with changed colors
 import { db } from '../data/db';
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -251,8 +251,8 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             type: 'fill',
             source: 'all-restrictions',
             paint: {
-              'fill-color': '#ff0000',
-              'fill-opacity': 0.5
+              'fill-color': '#3b82f6',
+              'fill-opacity': 0.3
             }
           });
 
@@ -261,8 +261,8 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             type: 'line',
             source: 'all-restrictions',
             paint: {
-              'line-color': '#ff0000',
-              'line-width': 3
+              'line-color': '#2563eb',
+              'line-width': 2
             }
           });
 

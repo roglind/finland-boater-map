@@ -1,4 +1,4 @@
-// Add debug stuff
+// Add debug stuff 2
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -242,6 +242,7 @@ function App() {
         boatPosition={boatPosition}
         restrictions={applicableRestrictions}
         signs={nearbySigns}
+        filters={filters}
       />
       
       <div className="controls">

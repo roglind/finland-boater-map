@@ -1,6 +1,6 @@
-// MapView component with all-areas display with changed colors
+// MapView with centered boat and manual positioning
 import { db } from '../data/db';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, ApplicableRestriction, NearbySign } from '../types';
 import './MapView.css';
@@ -20,8 +20,8 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const [isFollowingGPS, setIsFollowingGPS] = useState(true);
 
   // Initialize map (once)
   useEffect(() => {
@@ -63,7 +63,6 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
 
     return () => {
       // cleanup markers
-      markerRef.current?.remove();
       signMarkersRef.current.forEach(m => m.remove());
       // remove map
       map.remove();
@@ -72,39 +71,37 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
 
-  // Update boat position marker
+  // Follow GPS position when enabled
   useEffect(() => {
-    if (!mapRef.current || !boatPosition) return;
+    if (!mapRef.current || !boatPosition || !isFollowingGPS) return;
 
     const map = mapRef.current;
 
-    if (!markerRef.current) {
-      // Create boat marker
-      const el = document.createElement('div');
-      el.className = 'boat-marker';
-      el.innerHTML = '🚤';
+    // Center map on GPS position
+    map.flyTo({
+      center: [boatPosition.lng, boatPosition.lat],
+      zoom: 13,
+      duration: 500
+    });
+  }, [boatPosition, isFollowingGPS]);
 
-      markerRef.current = new maplibregl.Marker({ element: el })
-        .setLngLat([boatPosition.lng, boatPosition.lat])
-        .addTo(map);
+  // Track when user manually pans the map
+  useEffect(() => {
+    if (!mapRef.current) return;
 
-      // Center map on first position
-      map.flyTo({
-        center: [boatPosition.lng, boatPosition.lat],
-        zoom: 13,
-        duration: 1000
-      });
-    } else {
-      // Update existing marker
-      markerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
-    }
+    const map = mapRef.current;
 
-    // Update heading rotation if available
-    if (boatPosition.heading != null && markerRef.current) {
-      const el = markerRef.current.getElement();
-      el.style.transform = `rotate(${boatPosition.heading}deg)`;
-    }
-  }, [boatPosition]);
+    const handleDragStart = () => {
+      // User manually dragged, stop following GPS
+      setIsFollowingGPS(false);
+    };
+
+    map.on('dragstart', handleDragStart);
+
+    return () => {
+      map.off('dragstart', handleDragStart);
+    };
+  }, []);
 
   // Update sign markers
   useEffect(() => {
@@ -245,7 +242,7 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
             data: geojson
           });
 
-          console.log('🟢 Adding layers (RED color, high opacity)');
+          console.log('🟢 Adding layers (BLUE color)');
           map.addLayer({
             id: 'all-restrictions-fill',
             type: 'fill',
@@ -279,7 +276,51 @@ function MapView({ boatPosition, restrictions, signs }: MapViewProps) {
   // Call it on every render attempt (it will early-return / retry if map not ready)
   displayAllAreas();
 
-  return <div ref={mapContainerRef} className="map-container" />;
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={mapContainerRef} className="map-container" />
+      
+      {/* Boat icon fixed at screen center */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '32px',
+        pointerEvents: 'none',
+        zIndex: 1000,
+        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+      }}>
+        🚤
+      </div>
+
+      {/* Re-center button - only shows when not following GPS */}
+      {!isFollowingGPS && boatPosition && (
+        <button
+          onClick={() => setIsFollowingGPS(true)}
+          style={{
+            position: 'absolute',
+            right: '10px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            padding: '12px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            width: '48px',
+            height: '48px',
+            cursor: 'pointer',
+            fontSize: '20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            zIndex: 1000
+          }}
+        >
+          📍
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default MapView;

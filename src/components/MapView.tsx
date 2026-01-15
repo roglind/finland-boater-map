@@ -1,4 +1,4 @@
-// MapView - Working version with filters and debugging
+// MapView - Working version with filters and debugging v2
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -104,7 +104,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
       map.remove();
       mapRef.current = null;
     };
-  });
+  }, []); // Run once
 
   // Update filters
     useEffect(() => {

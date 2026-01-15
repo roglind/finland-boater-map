@@ -1,4 +1,4 @@
-// MapView - Working version with filters and ref-based init
+// MapView - State-based initialization
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -15,21 +15,16 @@ interface MapViewProps {
 function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const mapInitialized = useRef(false);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
-  const [areasLoaded, setAreasLoaded] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
-  // Initialize map
+  // Initialize map once on mount
   useEffect(() => {
-    // Skip if already initialized
-    if (mapInitialized.current) return;
-    
-    // Skip if refs not ready
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current) return;
+    if (mapRef.current) return; // Already initialized
 
-    // Mark as initialized
-    mapInitialized.current = true;
+    console.log('🟢 Initializing map...');
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -53,14 +48,16 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     mapRef.current = map;
 
     map.on('load', async () => {
+      console.log('🟢 Map loaded! Adding areas...');
+      
       const allAreas = await db.restriction_areas.toArray();
+      console.log('🟢 Got', allAreas.length, 'areas');
 
       const geojson: GeoJSON.FeatureCollection = {
         type: 'FeatureCollection',
         features: allAreas
           .filter(r => {
             if (!r.geometry?.coordinates) return false;
-      
             const checkCoords = (coords: any): boolean => {
               if (Array.isArray(coords)) {
                 if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
@@ -70,7 +67,6 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
               }
               return false;
             };
-      
             return checkCoords(r.geometry.coordinates);
           })
           .map(r => ({
@@ -85,6 +81,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
           }))
       };
 
+      console.log('🟢 Adding', geojson.features.length, 'features');
       map.addSource('all-restrictions', { type: 'geojson', data: geojson });
       map.addLayer({
         id: 'all-restrictions-fill',
@@ -99,51 +96,45 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
 
-      setAreasLoaded(true);
+      console.log('🟢 Map ready!');
+      setMapReady(true);
     });
-  }); // NO dependency array - runs every render but protected by ref
+
+    return () => {
+      console.log('🟢 Cleanup - removing map');
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      setMapReady(false);
+    };
+  }, []); // Run once on mount
 
   // Update filters
   useEffect(() => {
-    console.log('🔵 FILTER useEffect - areasLoaded:', areasLoaded, 'mapRef:', !!mapRef.current);
+    console.log('🔵 Filter effect - mapReady:', mapReady);
     
-    if (!mapRef.current || !areasLoaded) {
-      console.log('🔵 Skipping filters - not ready');
-      return;
-    }
-
-    const map = mapRef.current;
-    
-    console.log('🔵 Map loaded?', map.loaded());
-    if (!map.loaded()) {
-      console.log('🔵 Map not loaded yet');
-      return;
-    }
-    
-    console.log('🔵 Has fill layer?', !!map.getLayer('all-restrictions-fill'));
-    if (!map.getLayer('all-restrictions-fill')) {
-      console.log('🔵 Layers not ready yet');
+    if (!mapRef.current || !mapReady) {
+      console.log('🔵 Not ready yet');
       return;
     }
 
     console.log('🔵 Applying filters:', filters);
+    const map = mapRef.current;
     const filterExpr: any[] = ['all'];
 
     if (!filters.ammattiliikenne) {
       filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
-      console.log('🔵 Hiding ammattiliikenne areas');
     }
-
     if (!filters.vesiskootteri) {
       filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
-      console.log('🔵 Hiding vesiskootteri areas');
     }
 
     console.log('🔵 Filter expression:', filterExpr);
     map.setFilter('all-restrictions-fill', filterExpr);
     map.setFilter('all-restrictions-line', filterExpr);
-    console.log('🔵 Filters applied!');
-  }, [filters, areasLoaded]);
+    console.log('🔵 Done!');
+  }, [filters, mapReady]);
 
   // GPS follow
   useEffect(() => {
@@ -157,9 +148,9 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     const handleDrag = () => setIsFollowingGPS(false);
     mapRef.current.on('dragstart', handleDrag);
     return () => mapRef.current?.off('dragstart', handleDrag);
-  }, []);
+  }, [mapReady]);
 
-  // Update sign markers
+  // Update signs
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;

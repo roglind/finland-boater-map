@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display
+// MapView with filter-responsive area display fixed
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -58,14 +58,19 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-    mapRef.current = map;
+  mapRef.current = map;
 
-    // Wait for map to load, then add areas
+  // Add areas when map is ready
+  if (map.loaded()) {
+    console.log('🗺️ Map already loaded');
+    loadAndDisplayAreas();
+  } else {
+    console.log('🗺️ Waiting for map load...');
     map.on('load', () => {
-      console.log('🗺️ Map loaded event');
+      console.log('🗺️ Map load event fired');
       loadAndDisplayAreas();
     });
-
+  }
     return () => {
       signMarkersRef.current.forEach(m => m.remove());
       map.remove();

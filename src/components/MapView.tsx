@@ -1,4 +1,4 @@
-// MapView - Working version with filters and signs
+// MapView - Working version with filters and signs fix
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -106,12 +106,17 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     };
   });
 
-  // Update filters
-  useEffect(() => {
-    if (!mapRef.current || !areasLoaded) return;
+  // Update filters 
+    useEffect(() => {
+      if (!mapRef.current || !areasLoaded) return;
 
-    const map = mapRef.current;
-    const filterExpr: any[] = ['all'];
+      const map = mapRef.current;
+    
+      // Make sure map and style are fully loaded
+      if (!map.loaded()) return;
+    
+      // Also check if the layers exist
+      if (!map.getLayer('all-restrictions-fill')) return;    const filterExpr: any[] = ['all'];
 
     if (!filters.ammattiliikenne) {
       filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);

@@ -1,4 +1,4 @@
-// MapView - Working version with filters and signs fix
+// MapView - Working version with filters and debugging
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -106,29 +106,47 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     };
   });
 
-  // Update filters 
+  // Update filters
     useEffect(() => {
-      if (!mapRef.current || !areasLoaded) return;
+      console.log('🔵 FILTER useEffect - areasLoaded:', areasLoaded, 'mapRef:', !!mapRef.current);
+    
+      if (!mapRef.current || !areasLoaded) {
+        console.log('🔵 Skipping filters - not ready');
+        return;
+      }
 
       const map = mapRef.current;
     
-      // Make sure map and style are fully loaded
-      if (!map.loaded()) return;
+      console.log('🔵 Map loaded?', map.loaded());
+      if (!map.loaded()) {
+        console.log('🔵 Map not loaded yet');
+        return;
+      }
     
-      // Also check if the layers exist
-      if (!map.getLayer('all-restrictions-fill')) return;    const filterExpr: any[] = ['all'];
+      console.log('🔵 Has fill layer?', !!map.getLayer('all-restrictions-fill'));
+      if (!map.getLayer('all-restrictions-fill')) {
+        console.log('🔵 Layers not ready yet');
+        return;
+      }
 
-    if (!filters.ammattiliikenne) {
-      filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
-    }
+      console.log('🔵 Applying filters:', filters);
+      const filterExpr: any[] = ['all'];
 
-    if (!filters.vesiskootteri) {
-      filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
-    }
+      if (!filters.ammattiliikenne) {
+        filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
+        console.log('🔵 Hiding ammattiliikenne areas');
+      }
 
-    map.setFilter('all-restrictions-fill', filterExpr);
-    map.setFilter('all-restrictions-line', filterExpr);
-  }, [filters, areasLoaded]);
+      if (!filters.vesiskootteri) {
+        filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
+        console.log('🔵 Hiding vesiskootteri areas');
+      }
+
+      console.log('🔵 Filter expression:', filterExpr);
+      map.setFilter('all-restrictions-fill', filterExpr);
+      map.setFilter('all-restrictions-line', filterExpr);
+      console.log('🔵 Filters applied!');
+    }, [filters, areasLoaded]);
 
   // GPS follow
   useEffect(() => {

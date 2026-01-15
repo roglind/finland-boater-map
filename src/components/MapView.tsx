@@ -1,4 +1,4 @@
-// MapView - Working version with filters and debugging v2
+// MapView - Working version with filters and ref-based init
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -15,19 +15,21 @@ interface MapViewProps {
 function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapInitialized = useRef(false);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
   const [areasLoaded, setAreasLoaded] = useState(false);
 
   // Initialize map
   useEffect(() => {
-    if (mapRef.current) {
-      return; // Map already exists
-    }
+    // Skip if already initialized
+    if (mapInitialized.current) return;
+    
+    // Skip if refs not ready
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    if (!mapContainerRef.current) {
-      return; // Container not ready
-    }
+    // Mark as initialized
+    mapInitialized.current = true;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -99,54 +101,49 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
       setAreasLoaded(true);
     });
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []); // Run once
+  }); // NO dependency array - runs every render but protected by ref
 
   // Update filters
-    useEffect(() => {
-      console.log('🔵 FILTER useEffect - areasLoaded:', areasLoaded, 'mapRef:', !!mapRef.current);
+  useEffect(() => {
+    console.log('🔵 FILTER useEffect - areasLoaded:', areasLoaded, 'mapRef:', !!mapRef.current);
     
-      if (!mapRef.current || !areasLoaded) {
-        console.log('🔵 Skipping filters - not ready');
-        return;
-      }
+    if (!mapRef.current || !areasLoaded) {
+      console.log('🔵 Skipping filters - not ready');
+      return;
+    }
 
-      const map = mapRef.current;
+    const map = mapRef.current;
     
-      console.log('🔵 Map loaded?', map.loaded());
-      if (!map.loaded()) {
-        console.log('🔵 Map not loaded yet');
-        return;
-      }
+    console.log('🔵 Map loaded?', map.loaded());
+    if (!map.loaded()) {
+      console.log('🔵 Map not loaded yet');
+      return;
+    }
     
-      console.log('🔵 Has fill layer?', !!map.getLayer('all-restrictions-fill'));
-      if (!map.getLayer('all-restrictions-fill')) {
-        console.log('🔵 Layers not ready yet');
-        return;
-      }
+    console.log('🔵 Has fill layer?', !!map.getLayer('all-restrictions-fill'));
+    if (!map.getLayer('all-restrictions-fill')) {
+      console.log('🔵 Layers not ready yet');
+      return;
+    }
 
-      console.log('🔵 Applying filters:', filters);
-      const filterExpr: any[] = ['all'];
+    console.log('🔵 Applying filters:', filters);
+    const filterExpr: any[] = ['all'];
 
-      if (!filters.ammattiliikenne) {
-        filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
-        console.log('🔵 Hiding ammattiliikenne areas');
-      }
+    if (!filters.ammattiliikenne) {
+      filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
+      console.log('🔵 Hiding ammattiliikenne areas');
+    }
 
-      if (!filters.vesiskootteri) {
-        filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
-        console.log('🔵 Hiding vesiskootteri areas');
-      }
+    if (!filters.vesiskootteri) {
+      filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
+      console.log('🔵 Hiding vesiskootteri areas');
+    }
 
-      console.log('🔵 Filter expression:', filterExpr);
-      map.setFilter('all-restrictions-fill', filterExpr);
-      map.setFilter('all-restrictions-line', filterExpr);
-      console.log('🔵 Filters applied!');
-    }, [filters, areasLoaded]);
+    console.log('🔵 Filter expression:', filterExpr);
+    map.setFilter('all-restrictions-fill', filterExpr);
+    map.setFilter('all-restrictions-line', filterExpr);
+    console.log('🔵 Filters applied!');
+  }, [filters, areasLoaded]);
 
   // GPS follow
   useEffect(() => {

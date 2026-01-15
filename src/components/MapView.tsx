@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display - more debugging
+// MapView with filter-responsive area display - more debugging2
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -24,9 +24,13 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
   const [areasDisplayed, setAreasDisplayed] = useState(false);
+  console.log('🟣 MapView function body executing');
+  console.log('🟣 mapContainerRef:', mapContainerRef);
+  console.log('🟣 mapRef:', mapRef);
 
   // Initialize map (once)
     useEffect(() => {
+      console.log('🔴 MAP INIT useEffect STARTED');
       console.log('🔴 useEffect STARTED');
       console.log('🔴 mapContainerRef.current:', mapContainerRef.current);
       if (!mapContainerRef.current) {
@@ -180,6 +184,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
   // Update layer filters when filters change
   useEffect(() => {
+    console.log('🟡 FILTER useEffect STARTED');
     if (!mapRef.current || !areasDisplayed) return;
 
     const map = mapRef.current;
@@ -207,6 +212,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
   // Follow GPS position when enabled
   useEffect(() => {
+    console.log('🟢 GPS FOLLOW useEffect STARTED');
     if (!mapRef.current || !boatPosition || !isFollowingGPS) return;
 
     const map = mapRef.current;
@@ -220,6 +226,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
   // Track when user manually pans the map
   useEffect(() => {
+    console.log('🔵 DRAG TRACK useEffect STARTED');
     if (!mapRef.current) return;
 
     const map = mapRef.current;
@@ -237,6 +244,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
   // Update sign markers
   useEffect(() => {
+    console.log('🟠 SIGNS useEffect STARTED');
     if (!mapRef.current) return;
 
     const map = mapRef.current;

@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display - more debugging2
+// MapView with filter-responsive area display - FIXED
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -24,20 +24,17 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
   const [areasDisplayed, setAreasDisplayed] = useState(false);
-  console.log('🟣 MapView function body executing');
-  console.log('🟣 mapContainerRef:', mapContainerRef);
-  console.log('🟣 mapRef:', mapRef);
 
   // Initialize map (once)
-    useEffect(() => {
-      console.log('🔴 MAP INIT useEffect STARTED');
-      console.log('🔴 useEffect STARTED');
-      console.log('🔴 mapContainerRef.current:', mapContainerRef.current);
-      if (!mapContainerRef.current) {
-        console.log('🔴 No mapContainerRef, returning early');
-        return;
-      }
-      console.log('🔴 Creating map...');
+  useEffect(() => {
+    console.log('🔴 MAP INIT useEffect STARTED');
+    
+    if (!mapContainerRef.current) {
+      console.log('🔴 No mapContainerRef, returning early');
+      return;
+    }
+    
+    console.log('🔴 Creating map...');
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -69,11 +66,42 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     mapRef.current = map;
-    console.log('🔵 CHECKPOINT 1: mapRef set');
-    console.log('🔵 CHECKPOINT 2: map.loaded() =', map.loaded());
+    console.log('🔴 Map created and stored in ref');
 
-    // Define loadAndDisplayAreas inside useEffect so it can access map
-    const loadAndDisplayAreas = async () => {
+    return () => {
+      console.log('🔴 Cleanup: removing map');
+      signMarkersRef.current.forEach(m => m.remove());
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Load and display areas when map is ready
+  useEffect(() => {
+    console.log('🟣 AREAS LOAD useEffect - checking conditions...');
+    console.log('🟣 mapRef.current:', mapRef.current);
+    console.log('🟣 areasDisplayed:', areasDisplayed);
+    
+    if (!mapRef.current || areasDisplayed) {
+      console.log('🟣 Skipping: no map or already displayed');
+      return;
+    }
+
+    const map = mapRef.current;
+    
+    if (!map.loaded()) {
+      console.log('🟣 Map not loaded yet, setting up load handler...');
+      map.once('load', () => {
+        console.log('🟣 Map load event fired, triggering re-render');
+        // Force re-render by updating state
+        setAreasDisplayed(false);
+      });
+      return;
+    }
+
+    console.log('🟣 All conditions met! Loading areas...');
+
+    const loadAreas = async () => {
       console.log('🟢 Loading all areas...');
 
       try {
@@ -130,6 +158,15 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
         console.log('🟢 Adding source with', features.length, 'features');
         
+        // Remove old source/layers if they exist
+        try {
+          if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
+          if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
+          if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
+        } catch (e) {
+          console.log('🟢 No existing layers to remove');
+        }
+        
         map.addSource('all-restrictions', {
           type: 'geojson',
           data: geojson
@@ -155,37 +192,23 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
           }
         });
 
-        console.log('🟢 Areas displayed successfully');
+        console.log('🟢 Areas displayed successfully!');
         setAreasDisplayed(true);
       } catch (error) {
         console.error('🟢 Error loading areas:', error);
       }
     };
 
-    // Add areas when map is ready
-    if (map.loaded()) {
-      console.log('🗺️ Map already loaded');
-      loadAndDisplayAreas();
-    } else {
-      console.log('🗺️ Waiting for map load...');
-      map.on('load', () => {
-        console.log('🗺️ Map load event fired');
-        loadAndDisplayAreas();
-      });
-    }
-
-    return () => {
-      signMarkersRef.current.forEach(m => m.remove());
-      map.remove();
-      mapRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadAreas();
+  }, [areasDisplayed]);
 
   // Update layer filters when filters change
   useEffect(() => {
     console.log('🟡 FILTER useEffect STARTED');
-    if (!mapRef.current || !areasDisplayed) return;
+    if (!mapRef.current || !areasDisplayed) {
+      console.log('🟡 Skipping: no map or areas not displayed');
+      return;
+    }
 
     const map = mapRef.current;
     console.log('🔄 Updating filters:', filters);

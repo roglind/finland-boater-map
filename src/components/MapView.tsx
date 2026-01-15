@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display - FIXED
+// MapView - Simple approach without complex useEffects
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -12,29 +12,19 @@ interface MapViewProps {
   filters: AppFilters;
 }
 
-function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
-  console.log('🗺️ MapView render:', {
-    position: boatPosition,
-    restrictionsCount: restrictions.length,
-    signsCount: signs.length
-  });
+let mapInitialized = false;
+let areasLoaded = false;
 
+function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
-  const [areasDisplayed, setAreasDisplayed] = useState(false);
 
-  // Initialize map (once)
-  useEffect(() => {
-    console.log('🔴 MAP INIT useEffect STARTED');
-    
-    if (!mapContainerRef.current) {
-      console.log('🔴 No mapContainerRef, returning early');
-      return;
-    }
-    
-    console.log('🔴 Creating map...');
+  // Initialize map once
+  if (!mapInitialized && mapContainerRef.current) {
+    console.log('🔴 Initializing map...');
+    mapInitialized = true;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -64,63 +54,24 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
-
     mapRef.current = map;
-    console.log('🔴 Map created and stored in ref');
 
-    return () => {
-      console.log('🔴 Cleanup: removing map');
-      signMarkersRef.current.forEach(m => m.remove());
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  // Load and display areas when map is ready
-  useEffect(() => {
-    console.log('🟣 AREAS LOAD useEffect - checking conditions...');
-    console.log('🟣 mapRef.current:', mapRef.current);
-    console.log('🟣 areasDisplayed:', areasDisplayed);
-    
-    if (!mapRef.current || areasDisplayed) {
-      console.log('🟣 Skipping: no map or already displayed');
-      return;
-    }
-
-    const map = mapRef.current;
-    
-    if (!map.loaded()) {
-      console.log('🟣 Map not loaded yet, setting up load handler...');
-      map.once('load', () => {
-        console.log('🟣 Map load event fired, triggering re-render');
-        // Force re-render by updating state
-        setAreasDisplayed(false);
-      });
-      return;
-    }
-
-    console.log('🟣 All conditions met! Loading areas...');
-
-    const loadAreas = async () => {
-      console.log('🟢 Loading all areas...');
-
+    // Load areas when map is ready
+    map.on('load', async () => {
+      console.log('🟢 Map loaded, loading areas...');
+      
       try {
         const allAreas = await db.restriction_areas.toArray();
-        console.log('🟢 Loaded', allAreas.length, 'areas from DB');
-
-        if (allAreas.length === 0) {
-          console.log('🟢 No areas to display');
-          return;
-        }
+        console.log('🟢 Loaded', allAreas.length, 'areas');
 
         // Validate geometries
         const validAreas = allAreas.filter(r => {
-          if (!r.geometry || !r.geometry.coordinates) return false;
+          if (!r.geometry?.coordinates) return false;
           
           const checkCoords = (coords: any): boolean => {
             if (Array.isArray(coords)) {
               if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
+                return isFinite(coords[0]) && isFinite(coords[1]);
               }
               return coords.every(c => checkCoords(c));
             }
@@ -132,41 +83,20 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
         console.log('🟢 Valid areas:', validAreas.length);
 
-        // Create GeoJSON features with filter properties
-        const features = validAreas.map(r => {
-          const isSpeedLimit = r.suuruusKmh != null;
-          const isAmmattiliikenne = r.lisatieto?.toLowerCase().includes('ammatti') || false;
-          const isVesiskootteri = r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
-                                 r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false;
-          
-          return {
+        const geojson: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features: validAreas.map(r => ({
             type: 'Feature' as const,
             properties: {
               id: r.id,
-              isSpeedLimit,
-              isAmmattiliikenne,
-              isVesiskootteri
+              isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
+              isVesiskootteri: r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
+                               r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false
             },
             geometry: r.geometry
-          };
-        });
-
-        const geojson: GeoJSON.FeatureCollection = {
-          type: 'FeatureCollection',
-          features
+          }))
         };
 
-        console.log('🟢 Adding source with', features.length, 'features');
-        
-        // Remove old source/layers if they exist
-        try {
-          if (map.getLayer('all-restrictions-fill')) map.removeLayer('all-restrictions-fill');
-          if (map.getLayer('all-restrictions-line')) map.removeLayer('all-restrictions-line');
-          if (map.getSource('all-restrictions')) map.removeSource('all-restrictions');
-        } catch (e) {
-          console.log('🟢 No existing layers to remove');
-        }
-        
         map.addSource('all-restrictions', {
           type: 'geojson',
           data: geojson
@@ -192,117 +122,79 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
           }
         });
 
-        console.log('🟢 Areas displayed successfully!');
-        setAreasDisplayed(true);
+        console.log('🟢 Areas displayed!');
+        areasLoaded = true;
       } catch (error) {
-        console.error('🟢 Error loading areas:', error);
+        console.error('🟢 Error:', error);
       }
-    };
+    });
+  }
 
-    loadAreas();
-  }, [areasDisplayed]);
-
-  // Update layer filters when filters change
+  // Update filters
   useEffect(() => {
-    console.log('🟡 FILTER useEffect STARTED');
-    if (!mapRef.current || !areasDisplayed) {
-      console.log('🟡 Skipping: no map or areas not displayed');
-      return;
-    }
+    if (!mapRef.current || !areasLoaded) return;
 
     const map = mapRef.current;
-    console.log('🔄 Updating filters:', filters);
-
-    // Build filter expression
     const filterExpr: any[] = ['all'];
 
-    // If ammattiliikenne is OFF, hide areas marked as ammattiliikenne
     if (!filters.ammattiliikenne) {
       filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
     }
-
-    // If vesiskootteri is OFF, hide vesiskootteri prohibition areas
     if (!filters.vesiskootteri) {
       filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
     }
 
-    // Apply filter to both layers
     map.setFilter('all-restrictions-fill', filterExpr);
     map.setFilter('all-restrictions-line', filterExpr);
+  }, [filters]);
 
-    console.log('🔄 Filters applied:', filterExpr);
-  }, [filters, areasDisplayed]);
-
-  // Follow GPS position when enabled
+  // Follow GPS
   useEffect(() => {
-    console.log('🟢 GPS FOLLOW useEffect STARTED');
     if (!mapRef.current || !boatPosition || !isFollowingGPS) return;
-
-    const map = mapRef.current;
-
-    map.flyTo({
+    mapRef.current.flyTo({
       center: [boatPosition.lng, boatPosition.lat],
       zoom: 13,
       duration: 500
     });
   }, [boatPosition, isFollowingGPS]);
 
-  // Track when user manually pans the map
+  // Track dragging
   useEffect(() => {
-    console.log('🔵 DRAG TRACK useEffect STARTED');
     if (!mapRef.current) return;
-
-    const map = mapRef.current;
-
-    const handleDragStart = () => {
-      setIsFollowingGPS(false);
-    };
-
-    map.on('dragstart', handleDragStart);
-
-    return () => {
-      map.off('dragstart', handleDragStart);
-    };
+    const handleDrag = () => setIsFollowingGPS(false);
+    mapRef.current.on('dragstart', handleDrag);
+    return () => mapRef.current?.off('dragstart', handleDrag);
   }, []);
 
-  // Update sign markers
+  // Update signs
   useEffect(() => {
-    console.log('🟠 SIGNS useEffect STARTED');
     if (!mapRef.current) return;
-
     const map = mapRef.current;
 
-    signMarkersRef.current.forEach(marker => marker.remove());
+    signMarkersRef.current.forEach(m => m.remove());
     signMarkersRef.current = [];
 
     signs.forEach(sign => {
       const el = document.createElement('div');
       el.className = 'sign-marker';
-
       const img = document.createElement('img');
       img.src = sign.iconUrl;
       img.alt = sign.nimiFi || 'Merkki';
       img.onerror = () => {
-        const baseKey = sign.iconKey.split('_')[0];
-        img.src = `/icons/${baseKey}.png`;
-        img.onerror = () => {
-          img.src = '/icons/merkki_default.png';
-        };
+        img.src = `/icons/${sign.iconKey.split('_')[0]}.png`;
+        img.onerror = () => { img.src = '/icons/merkki_default.png'; };
       };
-
       el.appendChild(img);
 
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(sign.geometry.coordinates as [number, number])
-        .setPopup(
-          new maplibregl.Popup({ offset: 25 }).setHTML(`
-            <div class="sign-popup">
-              <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
-              ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
-              <p class="distance">${sign.distance} m</p>
-            </div>
-          `)
-        )
+        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+          <div class="sign-popup">
+            <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
+            ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
+            <p class="distance">${sign.distance} m</p>
+          </div>
+        `))
         .addTo(map);
 
       signMarkersRef.current.push(marker);

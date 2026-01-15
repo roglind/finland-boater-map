@@ -1,4 +1,4 @@
-// MapView - Clean version with filters reverted
+// MapView - Ultra simple version
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -15,19 +15,28 @@ interface MapViewProps {
 function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [isFollowingGPS, setIsFollowingGPS] = useState(true);
-  const [areasLoaded, setAreasLoaded] = useState(false);
 
-  // Initialize map once
+  console.log('🔴 RENDER - mapContainerRef.current:', mapContainerRef.current);
+  console.log('🔴 RENDER - mapRef.current:', mapRef.current);
+
+  // SINGLE useEffect for everything
   useEffect(() => {
+    console.log('🟢 useEffect RUNNING');
+    console.log('🟢 mapContainerRef.current:', mapContainerRef.current);
+    console.log('🟢 mapRef.current:', mapRef.current);
+
     if (mapRef.current) {
-      return; // Map already exists
+      console.log('🟢 Map already exists, skipping init');
+      return;
     }
 
     if (!mapContainerRef.current) {
-      return; // Container not ready
+      console.log('🟢 No container yet');
+      return;
     }
+
+    console.log('🟢 Creating map NOW!');
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -50,15 +59,20 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
 
+    console.log('🟢 Map created! Waiting for load event...');
+
     map.on('load', async () => {
+      console.log('🟣 MAP LOADED EVENT!');
+      
       const allAreas = await db.restriction_areas.toArray();
+      console.log('🟣 Got', allAreas.length, 'areas');
 
       const geojson: GeoJSON.FeatureCollection = {
         type: 'FeatureCollection',
         features: allAreas
           .filter(r => {
             if (!r.geometry?.coordinates) return false;
-            
+      
             // Recursively check coordinates are valid numbers
             const checkCoords = (coords: any): boolean => {
               if (Array.isArray(coords)) {
@@ -69,20 +83,17 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
               }
               return false;
             };
-            
+      
             return checkCoords(r.geometry.coordinates);
           })
           .map(r => ({
             type: 'Feature' as const,
-            properties: {
-              id: r.id,
-              isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
-              isVesiskootteri: r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
-                               r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false
-            },
+            properties: { id: r.id },
             geometry: r.geometry
           }))
       };
+
+      console.log('🟣 Adding', geojson.features.length, 'features to map');
 
       map.addSource('all-restrictions', { type: 'geojson', data: geojson });
       map.addLayer({
@@ -98,35 +109,15 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
 
-      setAreasLoaded(true);
+      console.log('🟣 DONE!');
     });
 
     return () => {
+      console.log('🟢 Cleanup');
       map.remove();
       mapRef.current = null;
     };
-  }, []); // Empty array = run once on mount
-
-  // Update filters
-  useEffect(() => {
-    if (!mapRef.current || !areasLoaded) return;
-
-    const map = mapRef.current;
-    const filterExpr: any[] = ['all'];
-
-    // If ammattiliikenne is OFF, hide areas marked as ammattiliikenne
-    if (!filters.ammattiliikenne) {
-      filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
-    }
-
-    // If vesiskootteri is OFF, hide vesiskootteri prohibition areas
-    if (!filters.vesiskootteri) {
-      filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
-    }
-
-    map.setFilter('all-restrictions-fill', filterExpr);
-    map.setFilter('all-restrictions-line', filterExpr);
-  }, [filters, areasLoaded]);
+  });
 
   // GPS follow
   useEffect(() => {
@@ -134,57 +125,13 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     mapRef.current.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: 13, duration: 500 });
   }, [boatPosition, isFollowingGPS]);
 
-  // Track dragging
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const handleDrag = () => setIsFollowingGPS(false);
-    mapRef.current.on('dragstart', handleDrag);
-    return () => mapRef.current?.off('dragstart', handleDrag);
-  });
-
-  // Update signs
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
-
-    signMarkersRef.current.forEach(m => m.remove());
-    signMarkersRef.current = [];
-
-    signs.forEach(sign => {
-      const el = document.createElement('div');
-      el.className = 'sign-marker';
-      const img = document.createElement('img');
-      img.src = sign.iconUrl;
-      img.alt = sign.nimiFi || 'Merkki';
-      img.onerror = () => {
-        img.src = `/icons/${sign.iconKey.split('_')[0]}.png`;
-        img.onerror = () => { img.src = '/icons/merkki_default.png'; };
-      };
-      el.appendChild(img);
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat(sign.geometry.coordinates as [number, number])
-        .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
-          <div class="sign-popup">
-            <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
-            ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
-            <p class="distance">${sign.distance} m</p>
-          </div>
-        `))
-        .addTo(map);
-
-      signMarkersRef.current.push(marker);
-    });
-  }, [signs]);
-
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={mapContainerRef} className="map-container" />
       <div style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)', fontSize: '32px',
-        pointerEvents: 'none', zIndex: 1000,
-        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+        pointerEvents: 'none', zIndex: 1000
       }}>🚤</div>
       {!isFollowingGPS && boatPosition && (
         <button onClick={() => setIsFollowingGPS(true)} style={{
@@ -193,8 +140,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
           backgroundColor: '#3b82f6', color: 'white',
           border: 'none', borderRadius: '50%',
           width: '48px', height: '48px', cursor: 'pointer',
-          fontSize: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          zIndex: 1000
+          fontSize: '20px', zIndex: 1000
         }}>📍</button>
       )}
     </div>

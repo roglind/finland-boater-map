@@ -1,4 +1,4 @@
-// MapView - Ultra simple version
+// MapView - Ultra simple versionv2
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -70,7 +70,22 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
       const geojson: GeoJSON.FeatureCollection = {
         type: 'FeatureCollection',
         features: allAreas
-          .filter(r => r.geometry?.coordinates)
+          .filter(r => {
+            if (!r.geometry?.coordinates) return false;
+      
+            // Recursively check coordinates are valid numbers
+            const checkCoords = (coords: any): boolean => {
+              if (Array.isArray(coords)) {
+                if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                  return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
+                }
+                return coords.every(c => checkCoords(c));
+              }
+              return false;
+            };
+      
+            return checkCoords(r.geometry.coordinates);
+          })
           .map(r => ({
             type: 'Feature' as const,
             properties: { id: r.id },

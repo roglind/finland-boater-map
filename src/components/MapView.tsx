@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display fixed
+// MapView with filter-responsive area display - FIXED ORDER
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -58,19 +58,110 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-  mapRef.current = map;
+    mapRef.current = map;
 
-  // Add areas when map is ready
-  if (map.loaded()) {
-    console.log('🗺️ Map already loaded');
-    loadAndDisplayAreas();
-  } else {
-    console.log('🗺️ Waiting for map load...');
-    map.on('load', () => {
-      console.log('🗺️ Map load event fired');
+    // Define loadAndDisplayAreas inside useEffect so it can access map
+    const loadAndDisplayAreas = async () => {
+      console.log('🟢 Loading all areas...');
+
+      try {
+        const allAreas = await db.restriction_areas.toArray();
+        console.log('🟢 Loaded', allAreas.length, 'areas from DB');
+
+        if (allAreas.length === 0) {
+          console.log('🟢 No areas to display');
+          return;
+        }
+
+        // Validate geometries
+        const validAreas = allAreas.filter(r => {
+          if (!r.geometry || !r.geometry.coordinates) return false;
+          
+          const checkCoords = (coords: any): boolean => {
+            if (Array.isArray(coords)) {
+              if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
+              }
+              return coords.every(c => checkCoords(c));
+            }
+            return false;
+          };
+          
+          return checkCoords(r.geometry.coordinates);
+        });
+
+        console.log('🟢 Valid areas:', validAreas.length);
+
+        // Create GeoJSON features with filter properties
+        const features = validAreas.map(r => {
+          const isSpeedLimit = r.suuruusKmh != null;
+          const isAmmattiliikenne = r.lisatieto?.toLowerCase().includes('ammatti') || false;
+          const isVesiskootteri = r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
+                                 r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false;
+          
+          return {
+            type: 'Feature' as const,
+            properties: {
+              id: r.id,
+              isSpeedLimit,
+              isAmmattiliikenne,
+              isVesiskootteri
+            },
+            geometry: r.geometry
+          };
+        });
+
+        const geojson: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features
+        };
+
+        console.log('🟢 Adding source with', features.length, 'features');
+        
+        map.addSource('all-restrictions', {
+          type: 'geojson',
+          data: geojson
+        });
+
+        map.addLayer({
+          id: 'all-restrictions-fill',
+          type: 'fill',
+          source: 'all-restrictions',
+          paint: {
+            'fill-color': '#3b82f6',
+            'fill-opacity': 0.3
+          }
+        });
+
+        map.addLayer({
+          id: 'all-restrictions-line',
+          type: 'line',
+          source: 'all-restrictions',
+          paint: {
+            'line-color': '#2563eb',
+            'line-width': 2
+          }
+        });
+
+        console.log('🟢 Areas displayed successfully');
+        setAreasDisplayed(true);
+      } catch (error) {
+        console.error('🟢 Error loading areas:', error);
+      }
+    };
+
+    // Add areas when map is ready
+    if (map.loaded()) {
+      console.log('🗺️ Map already loaded');
       loadAndDisplayAreas();
-    });
-  }
+    } else {
+      console.log('🗺️ Waiting for map load...');
+      map.on('load', () => {
+        console.log('🗺️ Map load event fired');
+        loadAndDisplayAreas();
+      });
+    }
+
     return () => {
       signMarkersRef.current.forEach(m => m.remove());
       map.remove();
@@ -78,99 +169,6 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Load areas once when map is ready
-  const loadAndDisplayAreas = async () => {
-    if (!mapRef.current) return;
-    
-    const map = mapRef.current;
-    console.log('🟢 Loading all areas...');
-
-    try {
-      const allAreas = await db.restriction_areas.toArray();
-      console.log('🟢 Loaded', allAreas.length, 'areas from DB');
-
-      if (allAreas.length === 0) {
-        console.log('🟢 No areas to display');
-        return;
-      }
-
-      // Validate geometries
-      const validAreas = allAreas.filter(r => {
-        if (!r.geometry || !r.geometry.coordinates) return false;
-        
-        const checkCoords = (coords: any): boolean => {
-          if (Array.isArray(coords)) {
-            if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-              return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
-            }
-            return coords.every(c => checkCoords(c));
-          }
-          return false;
-        };
-        
-        return checkCoords(r.geometry.coordinates);
-      });
-
-      console.log('🟢 Valid areas:', validAreas.length);
-
-      // Create GeoJSON features with filter properties
-      const features = validAreas.map(r => {
-        const isSpeedLimit = r.suuruusKmh != null;
-        const isAmmattiliikenne = r.lisatieto?.toLowerCase().includes('ammatti') || false;
-        const isVesiskootteri = r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
-                               r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false;
-        
-        return {
-          type: 'Feature' as const,
-          properties: {
-            id: r.id,
-            isSpeedLimit,
-            isAmmattiliikenne,
-            isVesiskootteri
-          },
-          geometry: r.geometry
-        };
-      });
-
-      const geojson: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features
-      };
-
-      console.log('🟢 Adding source with', features.length, 'features');
-      
-      map.addSource('all-restrictions', {
-        type: 'geojson',
-        data: geojson
-      });
-
-      map.addLayer({
-        id: 'all-restrictions-fill',
-        type: 'fill',
-        source: 'all-restrictions',
-        paint: {
-          'fill-color': '#3b82f6',
-          'fill-opacity': 0.3
-        }
-      });
-
-      map.addLayer({
-        id: 'all-restrictions-line',
-        type: 'line',
-        source: 'all-restrictions',
-        paint: {
-          'line-color': '#2563eb',
-          'line-width': 2
-        }
-      });
-
-      console.log('🟢 Areas displayed successfully');
-      setAreasDisplayed(true);
-    } catch (error) {
-      console.error('🟢 Error loading areas:', error);
-    }
-  };
 
   // Update layer filters when filters change
   useEffect(() => {
@@ -180,7 +178,6 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     console.log('🔄 Updating filters:', filters);
 
     // Build filter expression
-    // Show areas that match the active filters
     const filterExpr: any[] = ['all'];
 
     // If ammattiliikenne is OFF, hide areas marked as ammattiliikenne

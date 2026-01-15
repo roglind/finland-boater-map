@@ -1,4 +1,4 @@
-// MapView with filter-responsive area display - FIXED ORDER
+// MapView with filter-responsive area display - add chekpoints
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -59,6 +59,8 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     mapRef.current = map;
+    console.log('🔵 CHECKPOINT 1: mapRef set');
+    console.log('🔵 CHECKPOINT 2: map.loaded() =', map.loaded());
 
     // Define loadAndDisplayAreas inside useEffect so it can access map
     const loadAndDisplayAreas = async () => {

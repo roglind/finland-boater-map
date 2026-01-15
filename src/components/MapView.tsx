@@ -1,4 +1,4 @@
-// MapView - Clean version with filters
+// MapView - Clean version with filters reverted
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
@@ -140,7 +140,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     const handleDrag = () => setIsFollowingGPS(false);
     mapRef.current.on('dragstart', handleDrag);
     return () => mapRef.current?.off('dragstart', handleDrag);
-  }, []);
+  });
 
   // Update signs
   useEffect(() => {

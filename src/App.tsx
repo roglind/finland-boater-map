@@ -164,11 +164,12 @@ function App() {
   
   return (
     <div className="app">
-      <MapView 
+      <MapView
         boatPosition={boatPosition}
         restrictions={applicableRestrictions}
         signs={nearbySigns}
         filters={filters}
+        dataLoaded={dataLoaded}
       />
       
       <div className="controls">

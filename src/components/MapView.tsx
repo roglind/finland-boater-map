@@ -2,19 +2,46 @@
 import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import type { BoatPosition, ApplicableRestriction, NearbySign, AppFilters } from '../types';
+import type { BoatPosition, ApplicableRestriction, NearbySign, AppFilters, RestrictionArea } from '../types';
 import { getIconUrl } from '../logic/nearbySigns';
 import { textContainsJetSki } from '../logic/applicability';
 import './MapView.css';
+
+function buildRestrictionsGeoJSON(areas: RestrictionArea[]): GeoJSON.FeatureCollection {
+  const checkCoords = (coords: unknown): boolean => {
+    if (Array.isArray(coords)) {
+      if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+        return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
+      }
+    return (coords as unknown[]).every(c => checkCoords(c));
+    }
+    return false;
+  };
+  return {
+    type: 'FeatureCollection',
+    features: areas
+      .filter(r => r.geometry?.coordinates && checkCoords(r.geometry.coordinates))
+      .map(r => ({
+        type: 'Feature' as const,
+        properties: {
+          id: r.id,
+          isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
+          isVesiskootteri: textContainsJetSki(r)
+        },
+        geometry: r.geometry
+      }))
+  };
+}
 
 interface MapViewProps {
   boatPosition: BoatPosition | null;
   restrictions: ApplicableRestriction[];
   signs: NearbySign[];
   filters: AppFilters;
+  dataLoaded: boolean;
 }
 
-function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
+function MapView({ boatPosition, restrictions, signs, filters, dataLoaded }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
@@ -47,37 +74,11 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
 
-    map.on('load', async () => {
-      const allAreas = await db.restriction_areas.toArray();
-
-      const geojson: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: allAreas
-          .filter(r => {
-            if (!r.geometry?.coordinates) return false;
-            const checkCoords = (coords: any): boolean => {
-              if (Array.isArray(coords)) {
-                if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-                  return isFinite(coords[0]) && isFinite(coords[1]) && coords[0] !== 0 && coords[1] !== 0;
-                }
-                return coords.every(c => checkCoords(c));
-              }
-              return false;
-            };
-            return checkCoords(r.geometry.coordinates);
-          })
-          .map(r => ({
-            type: 'Feature' as const,
-            properties: {
-              id: r.id,
-              isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
-              isVesiskootteri: textContainsJetSki(r)
-            },
-            geometry: r.geometry
-          }))
-      };
-
-      map.addSource('all-restrictions', { type: 'geojson', data: geojson });
+    map.on('load', () => {
+      map.addSource('all-restrictions', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
       map.addLayer({
         id: 'all-restrictions-fill',
         type: 'fill',
@@ -90,7 +91,6 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
         source: 'all-restrictions',
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
-
       setMapReady(true);
     });
 
@@ -102,6 +102,17 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
       setMapReady(false);
     };
   }, []); // Run once on mount
+
+  // Load restriction areas into map when data is ready (avoids race with IndexedDB)
+  useEffect(() => {
+    if (!dataLoaded || !mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+    const source = map.getSource('all-restrictions') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    db.restriction_areas.toArray().then((areas) => {
+      source.setData(buildRestrictionsGeoJSON(areas));
+    });
+  }, [dataLoaded, mapReady]);
 
   // Update filters
   useEffect(() => {

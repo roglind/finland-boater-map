@@ -17,6 +17,9 @@ import type {
 } from './types';
 import './App.css';
 
+// Fallback when GPS is unavailable so signs and restrictions still show (e.g. desktop or denied location)
+const FALLBACK_POSITION: BoatPosition = { lat: 60.5, lng: 25.0, timestamp: 0 };
+
 function App() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({
     isUpdating: false,
@@ -68,10 +71,8 @@ function App() {
           spatialIndex.buildSignIndex(signs);
           setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
           setDataLoaded(true);
-          if (lastPositionRef.current) {
-            lastEvalRef.current = 0;
-            evaluatePosition(lastPositionRef.current);
-          }
+          lastEvalRef.current = 0;
+          evaluatePosition(lastPositionRef.current ?? FALLBACK_POSITION, { force: true });
         }
       } catch (error) {
         console.error('Failed to load data from IndexedDB:', error);
@@ -161,8 +162,9 @@ function App() {
 
   // Re-evaluate when filters change so sign-type selection and radius update the map immediately
   useEffect(() => {
-    if (!dataLoaded || !lastPositionRef.current) return;
-    evaluatePosition(lastPositionRef.current, { force: true });
+    if (!dataLoaded) return;
+    const position = lastPositionRef.current ?? FALLBACK_POSITION;
+    evaluatePosition(position, { force: true });
   }, [filters, dataLoaded, evaluatePosition]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {

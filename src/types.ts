@@ -1,4 +1,3 @@
-// FIX SPELLING ERRORS
 import type { Point, Polygon, MultiPolygon } from 'geojson';
 
 export interface RestrictionArea {

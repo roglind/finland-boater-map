@@ -1,4 +1,3 @@
-//Add more logging
 import { db, setLastUpdated, getMeta, setMeta } from './db';
 import type { RestrictionArea, TrafficSign, UpdateStatus } from '../types';
 
@@ -38,11 +37,6 @@ export class DataUpdater {
         vesiliikennePromise
       ]);
 
-      console.log('Fetched buffers:', {
-        rajoitus: rajoitusBuffer?.byteLength,
-        vesiliikenne: vesiliikenneBuffer?.byteLength
-      });
-
       // If data not modified, we're done
       if (!rajoitusBuffer || !vesiliikenneBuffer) {
         this.updateStatus({ 
@@ -56,21 +50,14 @@ export class DataUpdater {
        return;
       }
 
-      // Parse restriction areas
       this.updateStatus({ progress: 50, message: 'Käsitellään rajoitusalueet...' });
-      console.log('Parsing restriction areas...');
       const restrictionAreas = await this.parseInWorker(rajoitusBuffer, 'rajoitus') as RestrictionArea[];
-      console.log('Parsed restriction areas:', restrictionAreas.length);
-      
-      // Parse traffic signs
+
       this.updateStatus({ progress: 70, message: 'Käsitellään liikennemerkit...' });
       const trafficSigns = await this.parseInWorker(vesiliikenneBuffer, 'vesiliikenne') as TrafficSign[];
-      console.log('Parsed traffic signs:', trafficSigns.length);
-      
-      // Store to IndexedDB
+
       this.updateStatus({ progress: 85, message: 'Tallennetaan tietokantaan...' });
       await this.storeData(restrictionAreas, trafficSigns);
-      console.log('Data stored successfully');
 
       // Update timestamps
       const now = new Date().toISOString();
@@ -109,10 +96,7 @@ export class DataUpdater {
     
     const response = await fetch(url, { headers });
     
-    if (response.status === 304) {
-      console.log('Data not modified, using cached version');
-      return null; // Signal that data hasn't changed
-    } 
+    if (response.status === 304) return null; 
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

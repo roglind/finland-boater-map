@@ -36,11 +36,10 @@ export function getNearbySignsWithDistance(
   return nearby;
 }
 
+const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/*$/, '/');
+
 export function getIconUrl(iconKey: string): string {
-  // Try with rajoitusarvo first (e.g., merkki12_50.png)
-  // Fallback to without rajoitusarvo (e.g., merkki12.png)
-  // Final fallback to default
-  return `/icons/${iconKey}.png`;
+  return `${baseUrl}icons/${iconKey}.png`;
 }
 
 export function getIconUrlWithFallback(iconKey: string): string {

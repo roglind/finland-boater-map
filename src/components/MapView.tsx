@@ -3,6 +3,8 @@ import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, ApplicableRestriction, NearbySign, AppFilters } from '../types';
+import { getIconUrl } from '../logic/nearbySigns';
+import { textContainsJetSki } from '../logic/applicability';
 import './MapView.css';
 
 interface MapViewProps {
@@ -23,8 +25,6 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapRef.current) return; // Already initialized
-
-    console.log('🟢 Initializing map...');
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -48,10 +48,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
     mapRef.current = map;
 
     map.on('load', async () => {
-      console.log('🟢 Map loaded! Adding areas...');
-      
       const allAreas = await db.restriction_areas.toArray();
-      console.log('🟢 Got', allAreas.length, 'areas');
 
       const geojson: GeoJSON.FeatureCollection = {
         type: 'FeatureCollection',
@@ -74,14 +71,12 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
             properties: {
               id: r.id,
               isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
-              isVesiskootteri: r.rajoitustyyppi?.toLowerCase().includes('vesiskootteri') || 
-                               r.rajoitustyypit?.toLowerCase().includes('vesiskootteri') || false
+              isVesiskootteri: textContainsJetSki(r)
             },
             geometry: r.geometry
           }))
       };
 
-      console.log('🟢 Adding', geojson.features.length, 'features');
       map.addSource('all-restrictions', { type: 'geojson', data: geojson });
       map.addLayer({
         id: 'all-restrictions-fill',
@@ -96,12 +91,10 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
 
-      console.log('🟢 Map ready!');
       setMapReady(true);
     });
 
     return () => {
-      console.log('🟢 Cleanup - removing map');
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -112,14 +105,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
 
   // Update filters
   useEffect(() => {
-    console.log('🔵 Filter effect - mapReady:', mapReady);
-    
-    if (!mapRef.current || !mapReady) {
-      console.log('🔵 Not ready yet');
-      return;
-    }
-
-    console.log('🔵 Applying filters:', filters);
+    if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
     const filterExpr: any[] = ['all'];
 
@@ -130,10 +116,8 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
       filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
     }
 
-    console.log('🔵 Filter expression:', filterExpr);
     map.setFilter('all-restrictions-fill', filterExpr);
     map.setFilter('all-restrictions-line', filterExpr);
-    console.log('🔵 Done!');
   }, [filters, mapReady]);
 
   // GPS follow
@@ -165,8 +149,8 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
       img.src = sign.iconUrl;
       img.alt = sign.nimiFi || 'Merkki';
       img.onerror = () => {
-        img.src = `/icons/${sign.iconKey.split('_')[0]}.png`;
-        img.onerror = () => { img.src = '/icons/merkki_default.png'; };
+        img.src = getIconUrl(sign.iconKey.split('_')[0]);
+        img.onerror = () => { img.src = getIconUrl('merkki_default'); };
       };
       el.appendChild(img);
 
@@ -175,7 +159,7 @@ function MapView({ boatPosition, restrictions, signs, filters }: MapViewProps) {
         .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
           <div class="sign-popup">
             <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
-            ${sign.lisakilmentekstiFi ? `<p>${sign.lisakilmentekstiFi}</p>` : ''}
+            ${sign.lisakilventekstiFi ? `<p>${sign.lisakilventekstiFi}</p>` : ''}
             <p class="distance">${sign.distance} m</p>
           </div>
         `))

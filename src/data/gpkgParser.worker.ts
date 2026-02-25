@@ -107,7 +107,6 @@ interface ParseErrorMessage {
   
   if (hasSRID) {
     offset += 4;
-    console.log('DEBUG: Skipped SRID');
   }
   
   geomType = baseType;
@@ -136,32 +135,19 @@ interface ParseErrorMessage {
     
       for (let j = 0; j < numPoints; j++) {
         if (offset + 16 > view.byteLength) {
-          console.error('DEBUG: Would read past buffer at point', j, 'offset:', offset, 'buffer length:', view.byteLength);
           throw new Error('Buffer overflow at point ' + j);
         }
-      
         const x = view.getFloat64(offset, littleEndian);
         offset += 8;
         const y = view.getFloat64(offset, littleEndian);
         offset += 8;
-      
-        console.log('DEBUG: Point', j, '- x:', x, 'y:', y, 'offset now:', offset);
-      
-        if (hasZ) {
-          console.log('DEBUG: Skipping Z coordinate');
-          offset += 8;
-        }
-        if (hasM) {
-          console.log('DEBUG: Skipping M coordinate');
-          offset += 8;
-        }
+        if (hasZ) offset += 8;
+        if (hasM) offset += 8;
       
         ring.push([x, y]);
       }
       rings.push(ring);
     }
-  
-    console.log('DEBUG: Polygon parsed successfully');
     return { type: 'Polygon', coordinates: rings };
   }
   
@@ -261,10 +247,6 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
       : multiPolygon(geometry.coordinates);
     const bboxArr = bbox(feat) as [number, number, number, number];
 
-    if (results.length === 0) {
-      console.log('First geometry sample:', JSON.stringify(geometry));
-      console.log('First bbox sample:', bboxArr);
-    }    
     results.push({
       id: safeId,
       rajoitustyyppi: (row.RAJOITUSTYYPPI as string) || '',

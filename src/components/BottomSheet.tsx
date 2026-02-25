@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ApplicableRestriction, NearbySign } from '../types';
 import { formatRestriction } from '../logic/applicability';
-import { formatSignName, formatDistance } from '../logic/nearbySigns';
+import { formatSignName, formatDistance, getIconUrl } from '../logic/nearbySigns';
 import './BottomSheet.css';
 
 interface BottomSheetProps {
@@ -83,17 +83,17 @@ function BottomSheet({ restrictions, signs }: BottomSheetProps) {
                         const target = e.target as HTMLImageElement;
                         const baseKey = sign.iconKey.split('_')[0];
                         if (target.src.includes('_')) {
-                          target.src = `/icons/${baseKey}.png`;
+                          target.src = getIconUrl(baseKey);
                         } else if (!target.src.includes('default')) {
-                          target.src = '/icons/merkki_default.png';
+                          target.src = getIconUrl('merkki_default');
                         }
                       }}
                     />
                   </div>
                   <div className="sign-info">
                     <div className="sign-name">{formatSignName(sign)}</div>
-                    {sign.lisakilmentekstiFi && (
-                      <div className="sign-detail">{sign.lisakilmentekstiFi}</div>
+                    {sign.lisakilventekstiFi && (
+                      <div className="sign-detail">{sign.lisakilventekstiFi}</div>
                     )}
                     <div className="sign-distance">{formatDistance(sign.distance)}</div>
                   </div>

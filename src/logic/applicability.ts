@@ -1,7 +1,17 @@
-// ADD DEBUG4
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import type { RestrictionArea, ApplicableRestriction, AppFilters, BoatPosition } from '../types';
+
+export function textContainsJetSki(restriction: RestrictionArea): boolean {
+  const parts = [
+    restriction.rajoitustyyppi,
+    restriction.rajoitustyypit,
+    restriction.poikkeus,
+    restriction.lisatieto
+  ].filter(Boolean) as string[];
+  const combined = parts.join(' ').toLowerCase();
+  return combined.includes('vesiskootterilla');
+}
 
 export function isRestrictionApplicable(
   restriction: RestrictionArea,
@@ -9,58 +19,27 @@ export function isRestrictionApplicable(
   filters: AppFilters,
   now: Date = new Date()
 ): boolean {
-  // Check if point is inside polygon
   const pt = point([position.lng, position.lat]);
   const isInside = booleanPointInPolygon(pt, restriction.geometry as any);
-  
-  console.log(`Checking restriction ${restriction.id}: inside=${isInside}`);
-  
-  if (!isInside) {
-    console.log(`  ❌ Not inside polygon`);
-    return false;
-  }
-  
-  console.log(`  ✅ Inside polygon`);
-  
-  // Check date validity
+  if (!isInside) return false;
+
   if (restriction.alkuPvm) {
     const startDate = new Date(restriction.alkuPvm);
-    if (now < startDate) {
-      console.log(`  ❌ Too early (starts ${restriction.alkuPvm})`);
-      return false;
-    }
+    if (now < startDate) return false;
   }
-  
   if (restriction.loppuPvm) {
     const endDate = new Date(restriction.loppuPvm);
-    if (now > endDate) {
-      console.log(`  ❌ Expired (ended ${restriction.loppuPvm})`);
-      return false;
-    }
+    if (now > endDate) return false;
   }
-  console.log(`  Filter check: ammattiliikenne=${filters.ammattiliikenne}, vesiskootteri=${filters.vesiskootteri}`);
-  console.log(`  Restriction data: rajoitustyyppi="${restriction.rajoitustyyppi}", poikkeus="${restriction.poikkeus}"`);
 
-
-  // Apply Ammattiliikenne filter
   if (!filters.ammattiliikenne && restriction.poikkeus) {
-    const poikkeusLower = restriction.poikkeus.toLowerCase();
-    if (poikkeusLower.includes('huvi')) {
-      console.log(`  ❌ Filtered by ammattiliikenne`);
-      return false;
-    }
+    if (restriction.poikkeus.toLowerCase().includes('huvi')) return false;
   }
-  
-  // Apply Vesiskootteri filter
-  if (!filters.vesiskootteri && restriction.rajoitustyyppi) {
-    const rajoitustyyppiLower = restriction.rajoitustyyppi.toLowerCase();
-    if (rajoitustyyppiLower.includes('vesiskootterilla')) {
-      console.log(`  ❌ Filtered by vesiskootteri`);
-      return false;
-    }
+
+  if (!filters.vesiskootteri && textContainsJetSki(restriction)) {
+    return false;
   }
-  
-  console.log(`  ✅ APPLICABLE!`);
+
   return true;
 }
 
@@ -69,11 +48,6 @@ export function getApplicableRestrictions(
   position: BoatPosition,
   filters: AppFilters
 ): ApplicableRestriction[] {
-  console.log('🔍 getApplicableRestrictions called with', restrictions.length, 'candidates');
-  console.log('Sample candidate:', restrictions[0]);
-  console.log('Position:', position);
-  console.log('Filters:', filters);
-  
   const now = new Date();
   const applicable: ApplicableRestriction[] = [];
   

@@ -1,4 +1,3 @@
-// Add debug stuff 2
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from './data/db';
 import { DataUpdater } from './data/updater';
@@ -24,16 +23,6 @@ function App() {
     progress: 0,
     message: ''
   });
-
-  useEffect(() => {
-    if (!updaterRef.current) {
-      updaterRef.current = new DataUpdater(setUpdateStatus);
-    }
-  
-    return () => {
-      updaterRef.current?.cleanup();
-    };
-  }, []);
 
   const [filters, setFilters] = useState<AppFilters>({
     ammattiliikenne: true,
@@ -72,36 +61,17 @@ function App() {
   
     const loadDataFromDB = async () => {
       try {
-        console.log('Loading data from IndexedDB...');
         const areas = await db.restriction_areas.toArray();
         const signs = await db.traffic_signs.toArray();
-        console.log('Loaded from DB:', { areas: areas.length, signs: signs.length });
-    
         if (areas.length > 0 && signs.length > 0) {
-          console.log('Building spatial indexes...');
           spatialIndex.buildAreaIndex(areas);
           spatialIndex.buildSignIndex(signs);
-          // Debug: Check what was indexed
-          console.log('Sample area bbox:', areas[0]?.bbox);
-          console.log('Sample area geometry:', areas[0]?.geometry);
-          console.log('Sample sign coordinates:', signs[0]?.geometry?.coordinates);
-
-          // Try searching in a much wider area
-          const testCandidates = spatialIndex.getCandidateAreas(24.925, 60.247, 1.0);
-          console.log('Test search (radius 1.0 deg):', testCandidates.length, 'candidates');
-
           setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
           setDataLoaded(true);
-          // Force immediate evaluation if we have a position
           if (lastPositionRef.current) {
-            console.log('🔄 Forcing initial evaluation with current position');
-            // Reset last eval time to force evaluation
             lastEvalRef.current = 0;
             evaluatePosition(lastPositionRef.current);
           }
-          console.log('Data loaded and indexed successfully!');
-        } else {
-          console.log('No data in IndexedDB yet');
         }
       } catch (error) {
         console.error('Failed to load data from IndexedDB:', error);
@@ -109,20 +79,11 @@ function App() {
     };
   
     const handleUpdate = async () => {
-      console.log('=== UPDATE STARTED ===');
       try {
-        console.log('Calling updater.updateData()...');
         await updaterRef.current?.updateData();
-        console.log('=== UPDATE COMPLETED SUCCESSFULLY ===');
-    
-        // Reload data from IndexedDB
-        console.log('Reloading data from IndexedDB...');
         await loadDataFromDB();
-        console.log('Data reloaded!');
-    
         alert('Päivitys valmis! Ladattu ' + (await db.restriction_areas.count()) + ' rajoitusaluetta ja ' + (await db.traffic_signs.count()) + ' merkkiä.');
       } catch (error) {
-        console.error('=== UPDATE FAILED ===');
         console.error('Update failed:', error);
         alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
@@ -170,66 +131,31 @@ function App() {
   }, [filters, dataLoaded]);
   
   const evaluatePosition = useCallback((position: BoatPosition) => {
-    console.log('🎯 evaluatePosition called:', {
-      lat: position.lat,
-      lng: position.lng,
-      dataLoaded: dataLoaded
-    });
-  
-    if (!dataLoaded) {
-      console.log('⚠️ Data not loaded yet, skipping evaluation');
-      return;
-    }
-  
+    if (!dataLoaded) return;
+
     const now = Date.now();
-    const timeSinceLastEval = now - lastEvalRef.current;
-  
-    // Throttle evaluation to once per second
-    if (timeSinceLastEval < 1000) {
-      console.log('⏱️ Throttled (too soon)');
-      return;
-    }
-  
-    // Check if moved more than 10m
-    // TEMPORARILY DISABLED - for testing
-    /*
+    if (now - lastEvalRef.current < 1000) return;
+
     if (lastPositionRef.current) {
       const lastPos = lastPositionRef.current;
       const latDiff = Math.abs(position.lat - lastPos.lat);
       const lngDiff = Math.abs(position.lng - lastPos.lng);
       const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
-    
-      if (movedMeters < 10) {
-        console.log('📍 Haven\'t moved enough:', movedMeters.toFixed(2), 'm');
-        return;
-      }
+      if (movedMeters < 10) return;
     }
-    */
-  
+
     lastEvalRef.current = now;
-    console.log('✅ Evaluating...');
-  
-    // Get candidate areas from spatial index
     const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.05);
-    console.log('📦 Candidate areas from spatial index:', candidateAreas.length);
-  
-    // Filter to applicable restrictions
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
-    console.log('✓ Applicable restrictions:', applicable.length);
     setApplicableRestrictions(applicable);
-  
-    // Get nearby signs
+
     const candidateSigns = spatialIndex.getNearbySignsInRadius(
-      position.lng, 
-      position.lat, 
+      position.lng,
+      position.lat,
       filters.nearbyRadius
     );
-    console.log('🚩 Candidate signs:', candidateSigns.length);
-  
     const nearby = getNearbySignsWithDistance(candidateSigns, position, filters);
-    console.log('✓ Nearby signs after filtering:', nearby.length);
     setNearbySigns(nearby.slice(0, 10));
-  
   }, [filters, dataLoaded]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {

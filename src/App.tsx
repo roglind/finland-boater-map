@@ -162,15 +162,22 @@ function App() {
       areasForSigns = applicable;
     } else {
       const bounds = mapBoundsRef.current;
-      areasForSigns =
-        bounds != null
-          ? spatialIndex.getAreasInBbox(
-              bounds.sw.lng,
-              bounds.sw.lat,
-              bounds.ne.lng,
-              bounds.ne.lat
-            )
-          : applicable;
+      if (
+        bounds != null &&
+        typeof bounds.sw?.lng === 'number' &&
+        typeof bounds.sw?.lat === 'number' &&
+        typeof bounds.ne?.lng === 'number' &&
+        typeof bounds.ne?.lat === 'number'
+      ) {
+        areasForSigns = spatialIndex.getAreasInBbox(
+          bounds.sw.lng,
+          bounds.sw.lat,
+          bounds.ne.lng,
+          bounds.ne.lat
+        );
+      } else {
+        areasForSigns = applicable;
+      }
     }
     let nearby: NearbySign[];
     if (areasForSigns.length > 0) {

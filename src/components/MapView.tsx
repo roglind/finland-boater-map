@@ -93,20 +93,35 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
       setMapReady(true);
-      const center = map.getCenter();
-      const b = map.getBounds();
-      onMapViewportChange?.(center.lng, center.lat, {
-        sw: { lng: b.getWest(), lat: b.getSouth() },
-        ne: { lng: b.getEast(), lat: b.getNorth() }
-      });
+      if (onMapViewportChange) {
+        const reportViewport = () => {
+          try {
+            const center = map.getCenter();
+            const b = map.getBounds();
+            onMapViewportChange(center.lng, center.lat, {
+              sw: { lng: b.getWest(), lat: b.getSouth() },
+              ne: { lng: b.getEast(), lat: b.getNorth() }
+            });
+          } catch {
+            onMapViewportChange(map.getCenter().lng, map.getCenter().lat, null);
+          }
+        };
+        setTimeout(reportViewport, 0);
+      }
     });
     map.on('moveend', () => {
-      const center = map.getCenter();
-      const b = map.getBounds();
-      onMapViewportChange?.(center.lng, center.lat, {
-        sw: { lng: b.getWest(), lat: b.getSouth() },
-        ne: { lng: b.getEast(), lat: b.getNorth() }
-      });
+      if (onMapViewportChange) {
+        try {
+          const center = map.getCenter();
+          const b = map.getBounds();
+          onMapViewportChange(center.lng, center.lat, {
+            sw: { lng: b.getWest(), lat: b.getSouth() },
+            ne: { lng: b.getEast(), lat: b.getNorth() }
+          });
+        } catch {
+          // ignore
+        }
+      }
     });
 
     return () => {
@@ -201,7 +216,7 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
   }, [signs]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       <div ref={mapContainerRef} className="map-container" />
       <div style={{
         position: 'absolute', top: '50%', left: '50%',

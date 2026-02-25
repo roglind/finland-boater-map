@@ -33,13 +33,24 @@ export class SpatialIndex {
     this.areaIndex.load(nodes);
   }
   
+  /** Normalize to [lng, lat] for Finland; some data is stored as (lat, lng). */
+  private static signCoordsLngLat(coord: number[]): [number, number] {
+    if (coord.length !== 2) return [coord[0], coord[1]];
+    const [a, b] = coord;
+    if (a >= 55 && a <= 75 && b >= 18 && b <= 32) return [b, a];
+    return [a, b];
+  }
+
   buildSignIndex(signs: TrafficSign[]): void {
     this.signMap.clear();
     const nodes: SpatialIndexNode[] = [];
-    
+
     for (const sign of signs) {
+      const [lng, lat] = SpatialIndex.signCoordsLngLat(sign.geometry.coordinates);
+      if (sign.geometry.coordinates[0] !== lng || sign.geometry.coordinates[1] !== lat) {
+        (sign.geometry as { coordinates: number[] }).coordinates = [lng, lat];
+      }
       this.signMap.set(sign.id, sign);
-      const [lng, lat] = sign.geometry.coordinates;
       nodes.push({
         minX: lng,
         minY: lat,
@@ -48,7 +59,7 @@ export class SpatialIndex {
         id: sign.id
       });
     }
-    
+
     this.signIndex.clear();
     this.signIndex.load(nodes);
   }

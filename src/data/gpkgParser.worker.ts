@@ -44,6 +44,17 @@ function transformCoordinates(coords: number[]): number[] {
   return coords.map(c => transformCoordinates(c as any)) as any;
 }
 
+/** GeoJSON and MapLibre expect [lng, lat]. Some GeoPackages store points as (lat, lng). */
+function ensureLngLatOrder(coords: number[]): number[] {
+  if (coords.length !== 2) return coords;
+  const [a, b] = coords;
+  // Finland: lat 60–70, lng 18–32. If first is lat and second is lng, swap to [lng, lat].
+  if (a >= 55 && a <= 75 && b >= 18 && b <= 32) {
+    return [b, a];
+  }
+  return coords;
+}
+
 interface ParseMessage {
   type: 'parse';
   dataType: 'rajoitus' | 'vesiliikenne';
@@ -290,8 +301,10 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
     const geomWKB = row.geom as Uint8Array;
     const geometry = parseWKB(geomWKB);
 
-    // Transform coordinates
-    geometry.coordinates = transformCoordinates(geometry.coordinates);
+    // Transform coordinates and ensure [lng, lat] order (some GPKG use lat, lng)
+    let coords = transformCoordinates(geometry.coordinates) as number[];
+    coords = ensureLngLatOrder(coords);
+    geometry.coordinates = coords;
 
     const uniqueId = row.id || row.fid || results.length;
     const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;

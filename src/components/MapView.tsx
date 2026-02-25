@@ -39,10 +39,10 @@ interface MapViewProps {
   signs: NearbySign[];
   filters: AppFilters;
   dataLoaded: boolean;
-  onMapCenterChange?: (lng: number, lat: number) => void;
+  onMapViewportChange?: (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => void;
 }
 
-function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMapCenterChange }: MapViewProps) {
+function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMapViewportChange }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
@@ -94,11 +94,19 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
       });
       setMapReady(true);
       const center = map.getCenter();
-      onMapCenterChange?.(center.lng, center.lat);
+      const b = map.getBounds();
+      onMapViewportChange?.(center.lng, center.lat, {
+        sw: { lng: b.getWest(), lat: b.getSouth() },
+        ne: { lng: b.getEast(), lat: b.getNorth() }
+      });
     });
     map.on('moveend', () => {
       const center = map.getCenter();
-      onMapCenterChange?.(center.lng, center.lat);
+      const b = map.getBounds();
+      onMapViewportChange?.(center.lng, center.lat, {
+        sw: { lng: b.getWest(), lat: b.getSouth() },
+        ne: { lng: b.getEast(), lat: b.getNorth() }
+      });
     });
 
     return () => {

@@ -13,7 +13,8 @@ import type {
   AppFilters, 
   BoatPosition,
   ApplicableRestriction,
-  NearbySign
+  NearbySign,
+  RestrictionArea
 } from './types';
 import './App.css';
 
@@ -48,6 +49,7 @@ function App() {
   const lastEvalRef = useRef<number>(0);
   const lastPositionRef = useRef<BoatPosition | null>(null);
   const mapCenterRef = useRef<BoatPosition>({ ...FALLBACK_POSITION });
+  const mapBoundsRef = useRef<{ sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null>(null);
   
   // Initialize updater
   useEffect(() => {
@@ -150,14 +152,29 @@ function App() {
     }
 
     lastEvalRef.current = now;
-    const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.05);
+    const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.1);
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
     setApplicableRestrictions(applicable);
 
     const allSigns = spatialIndex.getAllSigns();
+    let areasForSigns: RestrictionArea[];
+    if (lastPositionRef.current) {
+      areasForSigns = applicable;
+    } else {
+      const bounds = mapBoundsRef.current;
+      areasForSigns =
+        bounds != null
+          ? spatialIndex.getAreasInBbox(
+              bounds.sw.lng,
+              bounds.sw.lat,
+              bounds.ne.lng,
+              bounds.ne.lat
+            )
+          : applicable;
+    }
     let nearby: NearbySign[];
-    if (applicable.length > 0) {
-      const signsInAreas = getSignsInAreas(applicable, allSigns);
+    if (areasForSigns.length > 0) {
+      const signsInAreas = getSignsInAreas(areasForSigns, allSigns);
       nearby = signsToNearbySigns(signsInAreas, position, filters);
     } else {
       const isUsingFallback = !lastPositionRef.current;
@@ -171,7 +188,7 @@ function App() {
       );
       nearby = getNearbySignsWithDistance(candidateSigns, position, { ...filters, nearbyRadius: signRadius });
     }
-    setNearbySigns(nearby.slice(0, 25));
+    setNearbySigns(nearby.slice(0, 50));
   }, [filters, dataLoaded]);
 
   // Re-evaluate when filters change so sign-type selection and radius update the map immediately
@@ -181,12 +198,16 @@ function App() {
     evaluatePosition(position, { force: true });
   }, [filters, dataLoaded, evaluatePosition]);
 
-  const handleMapCenterChange = useCallback((lng: number, lat: number) => {
-    mapCenterRef.current = { lng, lat, timestamp: 0 };
-    if (!lastPositionRef.current && dataLoaded) {
-      evaluatePosition(mapCenterRef.current, { force: true });
-    }
-  }, [dataLoaded, evaluatePosition]);
+  const handleMapViewportChange = useCallback(
+    (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => {
+      mapCenterRef.current = { lng, lat, timestamp: 0 };
+      mapBoundsRef.current = bounds;
+      if (!lastPositionRef.current && dataLoaded) {
+        evaluatePosition(mapCenterRef.current, { force: true });
+      }
+    },
+    [dataLoaded, evaluatePosition]
+  );
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -200,7 +221,7 @@ function App() {
         signs={nearbySigns}
         filters={filters}
         dataLoaded={dataLoaded}
-        onMapCenterChange={handleMapCenterChange}
+        onMapViewportChange={handleMapViewportChange}
       />
       
       <div className="controls">

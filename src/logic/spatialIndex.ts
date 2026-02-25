@@ -71,7 +71,19 @@ export class SpatialIndex {
       maxX: lng + buffer,
       maxY: lat + buffer
     });
-    
+    return results
+      .map(node => this.areaMap.get(node.id))
+      .filter((area): area is RestrictionArea => area != null);
+  }
+
+  /** Areas whose bbox overlaps the given bbox (for viewport-based sign lookup). */
+  getAreasInBbox(minLng: number, minLat: number, maxLng: number, maxLat: number): RestrictionArea[] {
+    const results = this.areaIndex.search({
+      minX: minLng,
+      minY: minLat,
+      maxX: maxLng,
+      maxY: maxLat
+    });
     return results
       .map(node => this.areaMap.get(node.id))
       .filter((area): area is RestrictionArea => area != null);

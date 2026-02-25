@@ -3,7 +3,7 @@ import { db } from './data/db';
 import { DataUpdater } from './data/updater';
 import { spatialIndex } from './logic/spatialIndex';
 import { getApplicableRestrictions } from './logic/applicability';
-import { getNearbySignsWithDistance, getUniqueVlmtyyppi } from './logic/nearbySigns';
+import { getNearbySignsWithDistance, getUniqueVlmtyyppi, getSignsInAreas, signsToNearbySigns } from './logic/nearbySigns';
 import MapView from './components/MapView';
 import BottomSheet from './components/BottomSheet';
 import SettingsPanel from './components/SettingsPanel';
@@ -154,16 +154,23 @@ function App() {
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
     setApplicableRestrictions(applicable);
 
-    const isUsingFallback = !lastPositionRef.current;
-    const signRadius = isUsingFallback
-      ? Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M)
-      : filters.nearbyRadius;
-    const candidateSigns = spatialIndex.getNearbySignsInRadius(
-      position.lng,
-      position.lat,
-      signRadius
-    );
-    const nearby = getNearbySignsWithDistance(candidateSigns, position, { ...filters, nearbyRadius: signRadius });
+    const allSigns = spatialIndex.getAllSigns();
+    let nearby: NearbySign[];
+    if (applicable.length > 0) {
+      const signsInAreas = getSignsInAreas(applicable, allSigns);
+      nearby = signsToNearbySigns(signsInAreas, position, filters);
+    } else {
+      const isUsingFallback = !lastPositionRef.current;
+      const signRadius = isUsingFallback
+        ? Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M)
+        : filters.nearbyRadius;
+      const candidateSigns = spatialIndex.getNearbySignsInRadius(
+        position.lng,
+        position.lat,
+        signRadius
+      );
+      nearby = getNearbySignsWithDistance(candidateSigns, position, { ...filters, nearbyRadius: signRadius });
+    }
     setNearbySigns(nearby.slice(0, 25));
   }, [filters, dataLoaded]);
 

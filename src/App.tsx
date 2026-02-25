@@ -130,18 +130,19 @@ function App() {
     };
   }, [filters, dataLoaded]);
   
-  const evaluatePosition = useCallback((position: BoatPosition) => {
+  const evaluatePosition = useCallback((position: BoatPosition, options?: { force?: boolean }) => {
     if (!dataLoaded) return;
 
     const now = Date.now();
-    if (now - lastEvalRef.current < 1000) return;
-
-    if (lastPositionRef.current) {
-      const lastPos = lastPositionRef.current;
-      const latDiff = Math.abs(position.lat - lastPos.lat);
-      const lngDiff = Math.abs(position.lng - lastPos.lng);
-      const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
-      if (movedMeters < 10) return;
+    if (!options?.force) {
+      if (now - lastEvalRef.current < 1000) return;
+      if (lastPositionRef.current) {
+        const lastPos = lastPositionRef.current;
+        const latDiff = Math.abs(position.lat - lastPos.lat);
+        const lngDiff = Math.abs(position.lng - lastPos.lng);
+        const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
+        if (movedMeters < 10) return;
+      }
     }
 
     lastEvalRef.current = now;
@@ -157,6 +158,12 @@ function App() {
     const nearby = getNearbySignsWithDistance(candidateSigns, position, filters);
     setNearbySigns(nearby.slice(0, 10));
   }, [filters, dataLoaded]);
+
+  // Re-evaluate when filters change so sign-type selection and radius update the map immediately
+  useEffect(() => {
+    if (!dataLoaded || !lastPositionRef.current) return;
+    evaluatePosition(lastPositionRef.current, { force: true });
+  }, [filters, dataLoaded, evaluatePosition]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));

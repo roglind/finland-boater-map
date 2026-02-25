@@ -109,9 +109,14 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded }: Map
     const map = mapRef.current;
     const source = map.getSource('all-restrictions') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
+    let cancelled = false;
     db.restriction_areas.toArray().then((areas) => {
+      if (cancelled || !mapRef.current) return;
       source.setData(buildRestrictionsGeoJSON(areas));
     });
+    return () => {
+      cancelled = true;
+    };
   }, [dataLoaded, mapReady]);
 
   // Update filters

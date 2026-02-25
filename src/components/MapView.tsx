@@ -39,9 +39,10 @@ interface MapViewProps {
   signs: NearbySign[];
   filters: AppFilters;
   dataLoaded: boolean;
+  onMapCenterChange?: (lng: number, lat: number) => void;
 }
 
-function MapView({ boatPosition, restrictions, signs, filters, dataLoaded }: MapViewProps) {
+function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMapCenterChange }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
@@ -92,6 +93,12 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded }: Map
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
       setMapReady(true);
+      const center = map.getCenter();
+      onMapCenterChange?.(center.lng, center.lat);
+    });
+    map.on('moveend', () => {
+      const center = map.getCenter();
+      onMapCenterChange?.(center.lng, center.lat);
     });
 
     return () => {

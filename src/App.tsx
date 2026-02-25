@@ -17,8 +17,10 @@ import type {
 } from './types';
 import './App.css';
 
-// Fallback when GPS is unavailable so signs and restrictions still show (e.g. desktop or denied location)
+// Fallback when GPS is unavailable; use Finland center so signs/restrictions still show
 const FALLBACK_POSITION: BoatPosition = { lat: 60.5, lng: 25.0, timestamp: 0 };
+// When using fallback/map center, use at least this radius (m) so the search finds signs
+const MIN_RADIUS_FOR_FALLBACK_M = 15000;
 
 function App() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({
@@ -45,6 +47,7 @@ function App() {
   const watchIdRef = useRef<number | null>(null);
   const lastEvalRef = useRef<number>(0);
   const lastPositionRef = useRef<BoatPosition | null>(null);
+  const mapCenterRef = useRef<BoatPosition>({ ...FALLBACK_POSITION });
   
   // Initialize updater
   useEffect(() => {
@@ -151,21 +154,32 @@ function App() {
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
     setApplicableRestrictions(applicable);
 
+    const isUsingFallback = !lastPositionRef.current;
+    const signRadius = isUsingFallback
+      ? Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M)
+      : filters.nearbyRadius;
     const candidateSigns = spatialIndex.getNearbySignsInRadius(
       position.lng,
       position.lat,
-      filters.nearbyRadius
+      signRadius
     );
-    const nearby = getNearbySignsWithDistance(candidateSigns, position, filters);
-    setNearbySigns(nearby.slice(0, 10));
+    const nearby = getNearbySignsWithDistance(candidateSigns, position, { ...filters, nearbyRadius: signRadius });
+    setNearbySigns(nearby.slice(0, 25));
   }, [filters, dataLoaded]);
 
   // Re-evaluate when filters change so sign-type selection and radius update the map immediately
   useEffect(() => {
     if (!dataLoaded) return;
-    const position = lastPositionRef.current ?? FALLBACK_POSITION;
+    const position = lastPositionRef.current ?? mapCenterRef.current;
     evaluatePosition(position, { force: true });
   }, [filters, dataLoaded, evaluatePosition]);
+
+  const handleMapCenterChange = useCallback((lng: number, lat: number) => {
+    mapCenterRef.current = { lng, lat, timestamp: 0 };
+    if (!lastPositionRef.current && dataLoaded) {
+      evaluatePosition(mapCenterRef.current, { force: true });
+    }
+  }, [dataLoaded, evaluatePosition]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -179,6 +193,7 @@ function App() {
         signs={nearbySigns}
         filters={filters}
         dataLoaded={dataLoaded}
+        onMapCenterChange={handleMapCenterChange}
       />
       
       <div className="controls">

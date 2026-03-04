@@ -40,6 +40,7 @@ interface MapViewProps {
   onRequestGpsMode?: () => void;
   onMapViewportChange?: (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => void;
   onMapDragStart?: () => void;
+  onMarkersRendered?: (count: number) => void;
 }
 
 function MapView({
@@ -50,7 +51,8 @@ function MapView({
   mode,
   onRequestGpsMode,
   onMapViewportChange,
-  onMapDragStart
+  onMapDragStart,
+  onMarkersRendered
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -93,59 +95,63 @@ function MapView({
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     mapRef.current = map;
 
-    map.on('load', () => {
-      map.addSource('all-restrictions', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      });
-      map.addLayer({
-        id: 'all-restrictions-fill',
-        type: 'fill',
-        source: 'all-restrictions',
-        paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.3 }
-      });
-      map.addLayer({
-        id: 'all-restrictions-line',
-        type: 'line',
-        source: 'all-restrictions',
-        paint: { 'line-color': '#2563eb', 'line-width': 2 }
-      });
+    const reportViewport = () => {
+      if (!viewportCallbackRef.current) return;
+      try {
+        const center = map.getCenter();
+        const b = map.getBounds();
+        viewportCallbackRef.current(center.lng, center.lat, {
+          sw: { lng: b.getWest(), lat: b.getSouth() },
+          ne: { lng: b.getEast(), lat: b.getNorth() }
+        });
+      } catch {
+        viewportCallbackRef.current(map.getCenter().lng, map.getCenter().lat, null);
+      }
+    };
+
+    const onLoad = () => {
+      if (!map.getSource('all-restrictions')) {
+        map.addSource('all-restrictions', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
+        });
+      }
+      if (!map.getLayer('all-restrictions-fill')) {
+        map.addLayer({
+          id: 'all-restrictions-fill',
+          type: 'fill',
+          source: 'all-restrictions',
+          paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.3 }
+        });
+      }
+      if (!map.getLayer('all-restrictions-line')) {
+        map.addLayer({
+          id: 'all-restrictions-line',
+          type: 'line',
+          source: 'all-restrictions',
+          paint: { 'line-color': '#2563eb', 'line-width': 2 }
+        });
+      }
       setMapReady(true);
-      if (viewportCallbackRef.current) {
-        const reportViewport = () => {
-          try {
-            const center = map.getCenter();
-            const b = map.getBounds();
-            viewportCallbackRef.current?.(center.lng, center.lat, {
-              sw: { lng: b.getWest(), lat: b.getSouth() },
-              ne: { lng: b.getEast(), lat: b.getNorth() }
-            });
-          } catch {
-            viewportCallbackRef.current?.(map.getCenter().lng, map.getCenter().lat, null);
-          }
-        };
-        setTimeout(reportViewport, 0);
-      }
-    });
-    map.on('moveend', () => {
-      if (viewportCallbackRef.current) {
-        try {
-          const center = map.getCenter();
-          const b = map.getBounds();
-          viewportCallbackRef.current?.(center.lng, center.lat, {
-            sw: { lng: b.getWest(), lat: b.getSouth() },
-            ne: { lng: b.getEast(), lat: b.getNorth() }
-          });
-        } catch {
-          // ignore
-        }
-      }
-    });
-    map.on('dragstart', () => {
+      setTimeout(reportViewport, 0);
+    };
+
+    const onMoveEnd = () => {
+      reportViewport();
+    };
+
+    const onDragStart = () => {
       dragStartCallbackRef.current?.();
-    });
+    };
+
+    map.on('load', onLoad);
+    map.on('moveend', onMoveEnd);
+    map.on('dragstart', onDragStart);
 
     return () => {
+      map.off('load', onLoad);
+      map.off('moveend', onMoveEnd);
+      map.off('dragstart', onDragStart);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -158,6 +164,7 @@ function MapView({
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
+    if (!map.isStyleLoaded()) return;
     const source = map.getSource('all-restrictions') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
     source.setData(buildRestrictionsGeoJSON(restrictionAreas));
@@ -202,7 +209,13 @@ function MapView({
       img.alt = sign.nimiFi || 'Merkki';
       img.onerror = () => {
         img.src = getIconUrl(sign.iconKey.split('_')[0]);
-        img.onerror = () => { img.src = getIconUrl('merkki_default'); };
+        img.onerror = () => {
+          img.src = getIconUrl('merkki_default');
+          img.onerror = () => {
+            img.classList.add('sign-marker-fallback');
+            img.alt = 'Merkki';
+          };
+        };
       };
       el.appendChild(img);
 
@@ -219,7 +232,8 @@ function MapView({
 
       signMarkersRef.current.push(marker);
     });
-  }, [signs]);
+    onMarkersRendered?.(signMarkersRef.current.length);
+  }, [signs, onMarkersRendered]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>

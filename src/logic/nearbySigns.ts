@@ -114,7 +114,9 @@ export function getIconUrlWithFallback(iconKey: string): string {
 }
 
 export function formatSignName(sign: NearbySign): string {
-  return sign.nimiFi || sign.nimiSv || `Merkki ${sign.vlmlajityyppi}`;
+  if (sign.nimiFi && sign.nimiFi.trim().length > 0) return sign.nimiFi.trim();
+  if (sign.nimiSv && sign.nimiSv.trim().length > 0) return sign.nimiSv.trim();
+  return `Merkkityyppi ${sign.vlmtyyppi}`;
 }
 
 export function formatDistance(meters: number): string {

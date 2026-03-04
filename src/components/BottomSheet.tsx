@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { ApplicableRestriction, NearbySign } from '../types';
 import { formatRestriction } from '../logic/applicability';
 import { formatSignName, formatDistance, getIconUrl } from '../logic/nearbySigns';
@@ -10,98 +9,48 @@ interface BottomSheetProps {
 }
 
 function BottomSheet({ restrictions, signs }: BottomSheetProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  const hasContent = restrictions.length > 0 || signs.length > 0;
-  
+  const primaryRestriction = restrictions[0];
+  const nearestSign = signs[0];
+
   return (
-    <div className={`bottom-sheet ${isExpanded ? 'expanded' : ''} ${!hasContent ? 'empty' : ''}`}>
-      <div className="bottom-sheet-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="drag-handle" />
-        <div className="header-content">
-          {restrictions.length > 0 && (
-            <div className="primary-info">
-              {formatRestriction(restrictions[0])}
+    <div className="bottom-sheet">
+      <div className="summary-grid">
+        <div className="summary-cell">
+          <div className="summary-title">Rajoitus</div>
+          <div className="summary-value" title={primaryRestriction ? formatRestriction(primaryRestriction) : 'Ei rajoituksia'}>
+            {primaryRestriction ? formatRestriction(primaryRestriction) : 'Ei rajoituksia'}
+          </div>
+        </div>
+
+        <div className="summary-cell">
+          <div className="summary-title">Lähin merkki</div>
+          {nearestSign ? (
+            <div className="summary-sign">
+              <img
+                className="summary-sign-icon"
+                src={nearestSign.iconUrl}
+                alt={formatSignName(nearestSign)}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  const baseKey = nearestSign.iconKey.split('_')[0];
+                  if (target.src.includes('_')) {
+                    target.src = getIconUrl(baseKey);
+                  } else if (!target.src.includes('merkki_default')) {
+                    target.src = getIconUrl('merkki_default');
+                  } else {
+                    target.classList.add('summary-sign-fallback');
+                    target.alt = 'Merkki';
+                  }
+                }}
+              />
+              <div className="summary-sign-text" title={`${formatSignName(nearestSign)} (${formatDistance(nearestSign.distance)})`}>
+                {formatSignName(nearestSign)} ({formatDistance(nearestSign.distance)})
+              </div>
             </div>
-          )}
-          {restrictions.length === 0 && signs.length === 0 && (
-            <div className="no-data">Ei rajoituksia tai merkkejä lähistöllä</div>
+          ) : (
+            <div className="summary-value">Ei merkkejä</div>
           )}
         </div>
-      </div>
-      
-      <div className="bottom-sheet-content">
-        {restrictions.length > 0 && (
-          <section className="restrictions-section">
-            <h3>Voimassa olevat rajoitukset</h3>
-            <div className="restrictions-list">
-              {restrictions.map((restriction, idx) => (
-                <div 
-                  key={restriction.id} 
-                  className={`restriction-item ${restriction.isPrimary ? 'primary' : ''}`}
-                >
-                  <div className="restriction-title">
-                    {formatRestriction(restriction)}
-                    {restriction.isPrimary && <span className="badge">Tärkein</span>}
-                  </div>
-                  
-                  {restriction.poikkeus && (
-                    <div className="restriction-detail">
-                      <strong>Poikkeus:</strong> {restriction.poikkeus}
-                    </div>
-                  )}
-                  
-                  {restriction.lisatieto && (
-                    <div className="restriction-detail">
-                      <strong>Lisätieto:</strong> {restriction.lisatieto}
-                    </div>
-                  )}
-                  
-                  {restriction.alkuPvm && (
-                    <div className="restriction-meta">
-                      Voimassa: {new Date(restriction.alkuPvm).toLocaleDateString('fi-FI')}
-                      {restriction.loppuPvm && ` - ${new Date(restriction.loppuPvm).toLocaleDateString('fi-FI')}`}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-        
-        {signs.length > 0 && (
-          <section className="signs-section">
-            <h3>Lähellä olevat merkit</h3>
-            <div className="signs-list">
-              {signs.map(sign => (
-                <div key={sign.id} className="sign-item">
-                  <div className="sign-icon">
-                    <img 
-                      src={sign.iconUrl} 
-                      alt={formatSignName(sign)}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        const baseKey = sign.iconKey.split('_')[0];
-                        if (target.src.includes('_')) {
-                          target.src = getIconUrl(baseKey);
-                        } else if (!target.src.includes('default')) {
-                          target.src = getIconUrl('merkki_default');
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="sign-info">
-                    <div className="sign-name">{formatSignName(sign)}</div>
-                    {sign.lisakilventekstiFi && (
-                      <div className="sign-detail">{sign.lisakilventekstiFi}</div>
-                    )}
-                    <div className="sign-distance">{formatDistance(sign.distance)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   );

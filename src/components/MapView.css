@@ -34,6 +34,12 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+.sign-marker img.sign-marker-fallback {
+  border-radius: 6px;
+  background: #E2E8F0;
+  padding: 4px;
+}
+
 .sign-popup {
   font-family: inherit;
   padding: 0.5rem;

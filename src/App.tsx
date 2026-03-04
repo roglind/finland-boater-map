@@ -60,6 +60,7 @@ function App() {
   const lastEvaluatedAtRef = useRef<number>(0);
   const lastEvaluatedPositionRef = useRef<BoatPosition | null>(null);
   const boatPositionRef = useRef<BoatPosition | null>(null);
+  const markersRenderedRef = useRef<number>(0);
   
   useEffect(() => {
     updaterRef.current = new DataUpdater(setUpdateStatus);
@@ -152,6 +153,10 @@ function App() {
     }
   }, []);
 
+  const handleMarkersRendered = useCallback((count: number) => {
+    markersRenderedRef.current = count;
+  }, []);
+
   useEffect(() => {
     if (!dataLoaded) return;
     const effectiveMode: EvalMode = mode === 'gps' && boatPosition ? 'gps' : 'viewport';
@@ -214,7 +219,8 @@ function App() {
         applicableAreas: applicable.length,
         areaSigns: areaNearby.length,
         radiusSigns: radiusNearby.length,
-        mergedSigns: merged.length
+        mergedSigns: merged.length,
+        markersRendered: markersRenderedRef.current
       });
     }
   }, [dataLoaded, dataVersion, filters, mode, boatPosition, viewport]);
@@ -234,6 +240,7 @@ function App() {
         onRequestGpsMode={handleRecenterRequest}
         onMapViewportChange={handleMapViewportChange}
         onMapDragStart={handleMapDragStart}
+        onMarkersRendered={handleMarkersRendered}
       />
       
       <div className="controls">

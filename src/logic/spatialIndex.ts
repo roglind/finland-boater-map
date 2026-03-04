@@ -41,12 +41,17 @@ export class SpatialIndex {
     return [a, b];
   }
 
+  private static isValidLngLat(lng: number, lat: number): boolean {
+    return Number.isFinite(lng) && Number.isFinite(lat) && lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
+  }
+
   buildSignIndex(signs: TrafficSign[]): void {
     this.signMap.clear();
     const nodes: SpatialIndexNode[] = [];
 
     for (const sign of signs) {
       const [lng, lat] = SpatialIndex.signCoordsLngLat(sign.geometry.coordinates);
+      if (!SpatialIndex.isValidLngLat(lng, lat)) continue;
       if (sign.geometry.coordinates[0] !== lng || sign.geometry.coordinates[1] !== lat) {
         (sign.geometry as { coordinates: number[] }).coordinates = [lng, lat];
       }

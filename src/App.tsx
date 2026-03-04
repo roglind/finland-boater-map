@@ -3,7 +3,13 @@ import { db } from './data/db';
 import { DataUpdater } from './data/updater';
 import { spatialIndex } from './logic/spatialIndex';
 import { getApplicableRestrictions } from './logic/applicability';
-import { getNearbySignsWithDistance, getUniqueVlmtyyppi, getSignsInAreas, signsToNearbySigns } from './logic/nearbySigns';
+import {
+  getNearbySignsWithDistance,
+  getUniqueVlmtyyppi,
+  getSignsInAreas,
+  mergeNearbySigns,
+  signsToNearbySigns
+} from './logic/nearbySigns';
 import MapView from './components/MapView';
 import BottomSheet from './components/BottomSheet';
 import SettingsPanel from './components/SettingsPanel';
@@ -18,9 +24,10 @@ import type {
 } from './types';
 import './App.css';
 
-// Fallback when GPS is unavailable; use Finland center so signs/restrictions still show
+type EvalMode = 'gps' | 'viewport';
+type ViewportBounds = { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } };
+
 const FALLBACK_POSITION: BoatPosition = { lat: 60.5, lng: 25.0, timestamp: 0 };
-// When using fallback/map center, use at least this radius (m) so the search finds signs
 const MIN_RADIUS_FOR_FALLBACK_M = 15000;
 
 function App() {
@@ -43,59 +50,57 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [availableVlmtyyppi, setAvailableVlmtyyppi] = useState<number[]>([]);
+  const [allAreas, setAllAreas] = useState<RestrictionArea[]>([]);
+  const [mode, setMode] = useState<EvalMode>('gps');
+  const [viewport, setViewport] = useState<{ center: BoatPosition; bounds: ViewportBounds | null } | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
   
   const updaterRef = useRef<DataUpdater | null>(null);
   const watchIdRef = useRef<number | null>(null);
-  const lastEvalRef = useRef<number>(0);
-  const lastPositionRef = useRef<BoatPosition | null>(null);
-  const mapCenterRef = useRef<BoatPosition>({ ...FALLBACK_POSITION });
-  const mapBoundsRef = useRef<{ sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null>(null);
+  const lastEvaluatedAtRef = useRef<number>(0);
+  const lastEvaluatedPositionRef = useRef<BoatPosition | null>(null);
+  const boatPositionRef = useRef<BoatPosition | null>(null);
   
-  // Initialize updater
   useEffect(() => {
     updaterRef.current = new DataUpdater(setUpdateStatus);
     
     return () => {
-      if (updaterRef.current) {
-        updaterRef.current.cleanup();
-      }
+      updaterRef.current?.cleanup();
     };
   }, []);
   
-  // Load data from IndexedDB on mount
+  const loadDataFromDB = useCallback(async () => {
+    try {
+      const areas = await db.restriction_areas.toArray();
+      const signs = await db.traffic_signs.toArray();
+      spatialIndex.buildAreaIndex(areas);
+      spatialIndex.buildSignIndex(signs);
+      setAllAreas(areas);
+      setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
+      setDataLoaded(areas.length > 0 && signs.length > 0);
+      setDataVersion(v => v + 1);
+      lastEvaluatedAtRef.current = 0;
+      lastEvaluatedPositionRef.current = null;
+    } catch (error) {
+      console.error('Failed to load data from IndexedDB:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadDataFromDB();
-  }, []);
-  
-    const loadDataFromDB = async () => {
-      try {
-        const areas = await db.restriction_areas.toArray();
-        const signs = await db.traffic_signs.toArray();
-        if (areas.length > 0 && signs.length > 0) {
-          spatialIndex.buildAreaIndex(areas);
-          spatialIndex.buildSignIndex(signs);
-          setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
-          setDataLoaded(true);
-          lastEvalRef.current = 0;
-          evaluatePosition(lastPositionRef.current ?? FALLBACK_POSITION, { force: true });
-        }
-      } catch (error) {
-        console.error('Failed to load data from IndexedDB:', error);
-      }
-    };
-  
-    const handleUpdate = async () => {
-      try {
-        await updaterRef.current?.updateData();
-        await loadDataFromDB();
-        alert('Päivitys valmis! Ladattu ' + (await db.restriction_areas.count()) + ' rajoitusaluetta ja ' + (await db.traffic_signs.count()) + ' merkkiä.');
-      } catch (error) {
-        console.error('Update failed:', error);
-        alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
-      }
-    };
+  }, [loadDataFromDB]);
 
-  // Start geolocation watch
+  const handleUpdate = async () => {
+    try {
+      await updaterRef.current?.updateData();
+      await loadDataFromDB();
+      alert('Päivitys valmis! Ladattu ' + (await db.restriction_areas.count()) + ' rajoitusaluetta ja ' + (await db.traffic_signs.count()) + ' merkkiä.');
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   useEffect(() => {
     if (!navigator.geolocation) {
       console.error('Geolocation not supported');
@@ -114,10 +119,7 @@ function App() {
         };
         
         setBoatPosition(newPosition);
-        lastPositionRef.current = newPosition;
-        
-        // Evaluate restrictions/signs
-        evaluatePosition(newPosition);
+        boatPositionRef.current = newPosition;
       },
       (error) => {
         console.error('Geolocation error:', error);
@@ -134,16 +136,35 @@ function App() {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
-  }, [filters, dataLoaded]);
-  
-  const evaluatePosition = useCallback((position: BoatPosition, options?: { force?: boolean }) => {
+  }, []);
+
+  const handleMapViewportChange = useCallback((lng: number, lat: number, bounds: ViewportBounds | null) => {
+    setViewport({ center: { lng, lat, timestamp: Date.now() }, bounds });
+  }, []);
+
+  const handleMapDragStart = useCallback(() => {
+    setMode('viewport');
+  }, []);
+
+  const handleRecenterRequest = useCallback(() => {
+    if (boatPositionRef.current) {
+      setMode('gps');
+    }
+  }, []);
+
+  useEffect(() => {
     if (!dataLoaded) return;
+    const effectiveMode: EvalMode = mode === 'gps' && boatPosition ? 'gps' : 'viewport';
+    const position =
+      effectiveMode === 'gps'
+        ? boatPosition!
+        : viewport?.center ?? boatPosition ?? FALLBACK_POSITION;
 
     const now = Date.now();
-    if (!options?.force) {
-      if (now - lastEvalRef.current < 1000) return;
-      if (lastPositionRef.current) {
-        const lastPos = lastPositionRef.current;
+    if (effectiveMode === 'gps') {
+      if (now - lastEvaluatedAtRef.current < 1000) return;
+      if (lastEvaluatedPositionRef.current) {
+        const lastPos = lastEvaluatedPositionRef.current;
         const latDiff = Math.abs(position.lat - lastPos.lat);
         const lngDiff = Math.abs(position.lng - lastPos.lng);
         const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
@@ -151,70 +172,52 @@ function App() {
       }
     }
 
-    lastEvalRef.current = now;
+    lastEvaluatedAtRef.current = now;
+    lastEvaluatedPositionRef.current = position;
+
     const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.1);
     const applicable = getApplicableRestrictions(candidateAreas, position, filters);
     setApplicableRestrictions(applicable);
 
     const allSigns = spatialIndex.getAllSigns();
-    let areasForSigns: RestrictionArea[];
-    if (lastPositionRef.current) {
-      areasForSigns = applicable;
-    } else {
-      const bounds = mapBoundsRef.current;
-      if (
-        bounds != null &&
-        typeof bounds.sw?.lng === 'number' &&
-        typeof bounds.sw?.lat === 'number' &&
-        typeof bounds.ne?.lng === 'number' &&
-        typeof bounds.ne?.lat === 'number'
-      ) {
-        areasForSigns = spatialIndex.getAreasInBbox(
-          bounds.sw.lng,
-          bounds.sw.lat,
-          bounds.ne.lng,
-          bounds.ne.lat
-        );
-      } else {
-        areasForSigns = applicable;
-      }
-    }
-    let nearby: NearbySign[];
-    if (areasForSigns.length > 0) {
-      const signsInAreas = getSignsInAreas(areasForSigns, allSigns);
-      nearby = signsToNearbySigns(signsInAreas, position, filters);
-    } else {
-      const isUsingFallback = !lastPositionRef.current;
-      const signRadius = isUsingFallback
-        ? Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M)
-        : filters.nearbyRadius;
-      const candidateSigns = spatialIndex.getNearbySignsInRadius(
-        position.lng,
-        position.lat,
-        signRadius
-      );
-      nearby = getNearbySignsWithDistance(candidateSigns, position, { ...filters, nearbyRadius: signRadius });
-    }
-    setNearbySigns(nearby.slice(0, 50));
-  }, [filters, dataLoaded]);
+    const areaSource =
+      effectiveMode === 'gps'
+        ? applicable
+        : viewport?.bounds
+          ? spatialIndex.getAreasInBbox(
+              viewport.bounds.sw.lng,
+              viewport.bounds.sw.lat,
+              viewport.bounds.ne.lng,
+              viewport.bounds.ne.lat
+            )
+          : [];
 
-  // Re-evaluate when filters change so sign-type selection and radius update the map immediately
-  useEffect(() => {
-    if (!dataLoaded) return;
-    const position = lastPositionRef.current ?? mapCenterRef.current;
-    evaluatePosition(position, { force: true });
-  }, [filters, dataLoaded, evaluatePosition]);
+    const areaNearby = signsToNearbySigns(getSignsInAreas(areaSource, allSigns), position, filters);
+    const radius = effectiveMode === 'gps'
+      ? filters.nearbyRadius
+      : Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M);
+    const radiusNearby = getNearbySignsWithDistance(
+      spatialIndex.getNearbySignsInRadius(position.lng, position.lat, radius),
+      position,
+      { ...filters, nearbyRadius: radius }
+    );
 
-  const handleMapViewportChange = useCallback(
-    (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => {
-      mapCenterRef.current = { lng, lat, timestamp: 0 };
-      mapBoundsRef.current = bounds;
-      if (!lastPositionRef.current && dataLoaded) {
-        evaluatePosition(mapCenterRef.current, { force: true });
-      }
-    },
-    [dataLoaded, evaluatePosition]
-  );
+    const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
+    setNearbySigns(merged);
+
+    if (import.meta.env.DEV) {
+      console.debug('[recompute]', {
+        mode: effectiveMode,
+        indexedAreas: spatialIndex.getAllAreas().length,
+        indexedSigns: allSigns.length,
+        candidateAreas: candidateAreas.length,
+        applicableAreas: applicable.length,
+        areaSigns: areaNearby.length,
+        radiusSigns: radiusNearby.length,
+        mergedSigns: merged.length
+      });
+    }
+  }, [dataLoaded, dataVersion, filters, mode, boatPosition, viewport]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -224,11 +227,13 @@ function App() {
     <div className="app">
       <MapView
         boatPosition={boatPosition}
-        restrictions={applicableRestrictions}
+        restrictionAreas={allAreas}
         signs={nearbySigns}
         filters={filters}
-        dataLoaded={dataLoaded}
+        mode={mode}
+        onRequestGpsMode={handleRecenterRequest}
         onMapViewportChange={handleMapViewportChange}
+        onMapDragStart={handleMapDragStart}
       />
       
       <div className="controls">

@@ -1,8 +1,6 @@
-// MapView - State-based initialization
-import { db } from '../data/db';
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import type { BoatPosition, ApplicableRestriction, NearbySign, AppFilters, RestrictionArea } from '../types';
+import type { BoatPosition, NearbySign, AppFilters, RestrictionArea } from '../types';
 import { getIconUrl } from '../logic/nearbySigns';
 import { textContainsJetSki } from '../logic/applicability';
 import './MapView.css';
@@ -35,19 +33,39 @@ function buildRestrictionsGeoJSON(areas: RestrictionArea[]): GeoJSON.FeatureColl
 
 interface MapViewProps {
   boatPosition: BoatPosition | null;
-  restrictions: ApplicableRestriction[];
+  restrictionAreas: RestrictionArea[];
   signs: NearbySign[];
   filters: AppFilters;
-  dataLoaded: boolean;
+  mode: 'gps' | 'viewport';
+  onRequestGpsMode?: () => void;
   onMapViewportChange?: (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => void;
+  onMapDragStart?: () => void;
 }
 
-function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMapViewportChange }: MapViewProps) {
+function MapView({
+  boatPosition,
+  restrictionAreas,
+  signs,
+  filters,
+  mode,
+  onRequestGpsMode,
+  onMapViewportChange,
+  onMapDragStart
+}: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
-  const [isFollowingGPS, setIsFollowingGPS] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const viewportCallbackRef = useRef<MapViewProps['onMapViewportChange']>(onMapViewportChange);
+  const dragStartCallbackRef = useRef<MapViewProps['onMapDragStart']>(onMapDragStart);
+
+  useEffect(() => {
+    viewportCallbackRef.current = onMapViewportChange;
+  }, [onMapViewportChange]);
+
+  useEffect(() => {
+    dragStartCallbackRef.current = onMapDragStart;
+  }, [onMapDragStart]);
 
   // Initialize map once on mount
   useEffect(() => {
@@ -93,28 +111,28 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
         paint: { 'line-color': '#2563eb', 'line-width': 2 }
       });
       setMapReady(true);
-      if (onMapViewportChange) {
+      if (viewportCallbackRef.current) {
         const reportViewport = () => {
           try {
             const center = map.getCenter();
             const b = map.getBounds();
-            onMapViewportChange(center.lng, center.lat, {
+            viewportCallbackRef.current?.(center.lng, center.lat, {
               sw: { lng: b.getWest(), lat: b.getSouth() },
               ne: { lng: b.getEast(), lat: b.getNorth() }
             });
           } catch {
-            onMapViewportChange(map.getCenter().lng, map.getCenter().lat, null);
+            viewportCallbackRef.current?.(map.getCenter().lng, map.getCenter().lat, null);
           }
         };
         setTimeout(reportViewport, 0);
       }
     });
     map.on('moveend', () => {
-      if (onMapViewportChange) {
+      if (viewportCallbackRef.current) {
         try {
           const center = map.getCenter();
           const b = map.getBounds();
-          onMapViewportChange(center.lng, center.lat, {
+          viewportCallbackRef.current?.(center.lng, center.lat, {
             sw: { lng: b.getWest(), lat: b.getSouth() },
             ne: { lng: b.getEast(), lat: b.getNorth() }
           });
@@ -122,6 +140,9 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
           // ignore
         }
       }
+    });
+    map.on('dragstart', () => {
+      dragStartCallbackRef.current?.();
     });
 
     return () => {
@@ -133,21 +154,14 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
     };
   }, []); // Run once on mount
 
-  // Load restriction areas into map when data is ready (avoids race with IndexedDB)
+  // Update restriction areas from App state (single source of truth)
   useEffect(() => {
-    if (!dataLoaded || !mapRef.current || !mapReady) return;
+    if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
     const source = map.getSource('all-restrictions') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
-    let cancelled = false;
-    db.restriction_areas.toArray().then((areas) => {
-      if (cancelled || !mapRef.current) return;
-      source.setData(buildRestrictionsGeoJSON(areas));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [dataLoaded, mapReady]);
+    source.setData(buildRestrictionsGeoJSON(restrictionAreas));
+  }, [restrictionAreas, mapReady]);
 
   // Update filters
   useEffect(() => {
@@ -166,19 +180,11 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
     map.setFilter('all-restrictions-line', filterExpr);
   }, [filters, mapReady]);
 
-  // GPS follow
+  // GPS follow only in GPS mode
   useEffect(() => {
-    if (!mapRef.current || !boatPosition || !isFollowingGPS) return;
+    if (!mapRef.current || !boatPosition || mode !== 'gps') return;
     mapRef.current.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: 13, duration: 500 });
-  }, [boatPosition, isFollowingGPS]);
-
-  // Track dragging
-  useEffect(() => {
-    if (!mapRef.current) return;
-    const handleDrag = () => setIsFollowingGPS(false);
-    mapRef.current.on('dragstart', handleDrag);
-    return () => mapRef.current?.off('dragstart', handleDrag);
-  }, [mapReady]);
+  }, [boatPosition, mode]);
 
   // Update signs
   useEffect(() => {
@@ -224,8 +230,8 @@ function MapView({ boatPosition, restrictions, signs, filters, dataLoaded, onMap
         pointerEvents: 'none', zIndex: 1000,
         filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
       }}>🚤</div>
-      {!isFollowingGPS && boatPosition && (
-        <button onClick={() => setIsFollowingGPS(true)} style={{
+      {mode === 'viewport' && boatPosition && (
+        <button onClick={onRequestGpsMode} style={{
           position: 'absolute', right: '10px', top: '50%',
           transform: 'translateY(-50%)', padding: '12px',
           backgroundColor: '#3b82f6', color: 'white',

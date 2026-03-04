@@ -11,6 +11,10 @@ function ensureLngLat(coord: number[]): [number, number] {
   return [a, b];
 }
 
+function isValidLngLat([lng, lat]: [number, number]): boolean {
+  return Number.isFinite(lng) && Number.isFinite(lat) && lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
+}
+
 /** Signs whose position is inside any of the given restriction areas (used when boat is in an area). */
 export function getSignsInAreas(
   areas: RestrictionArea[],
@@ -20,6 +24,7 @@ export function getSignsInAreas(
   const out: TrafficSign[] = [];
   for (const sign of allSigns) {
     const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
+    if (!isValidLngLat([lng, lat])) continue;
     const pt = point([lng, lat]);
     for (const area of areas) {
       if (booleanPointInPolygon(pt, area.geometry as any)) {
@@ -44,6 +49,7 @@ export function signsToNearbySigns(
       continue;
     }
     const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
+    if (!isValidLngLat([lng, lat])) continue;
     const dist = distance(boatPoint, point([lng, lat]), { units: 'meters' });
     nearby.push({
       ...sign,
@@ -72,12 +78,15 @@ export function getNearbySignsWithDistance(
       }
     }
     
-    const signPoint = point(sign.geometry.coordinates);
+    const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
+    if (!isValidLngLat([lng, lat])) continue;
+    const signPoint = point([lng, lat]);
     const dist = distance(boatPoint, signPoint, { units: 'meters' });
     
     if (dist <= filters.nearbyRadius) {
       nearby.push({
         ...sign,
+        geometry: { type: 'Point', coordinates: [lng, lat] },
         distance: Math.round(dist),
         iconUrl: getIconUrl(sign.iconKey)
       });
@@ -120,4 +129,15 @@ export function getUniqueVlmtyyppi(signs: TrafficSign[]): number[] {
   const unique = new Set<number>();
   signs.forEach(sign => unique.add(sign.vlmtyyppi));
   return Array.from(unique).sort((a, b) => a - b);
+}
+
+export function mergeNearbySigns(primary: NearbySign[], secondary: NearbySign[]): NearbySign[] {
+  const byId = new Map<number, NearbySign>();
+  for (const sign of [...primary, ...secondary]) {
+    const existing = byId.get(sign.id);
+    if (!existing || sign.distance < existing.distance) {
+      byId.set(sign.id, sign);
+    }
+  }
+  return Array.from(byId.values()).sort((a, b) => a.distance - b.distance);
 }

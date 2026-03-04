@@ -308,7 +308,10 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
 
     const uniqueId = row.id || row.fid || results.length;
     const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;
-    const vlmlajityyppi = row.VLMLAJITYYPPI as number;
+    if (!Array.isArray(coords) || coords.length !== 2 || !isFinite(coords[0]) || !isFinite(coords[1])) {
+      continue;
+    }
+    const vlmlajityyppi = (row.VLMLAJITYYPPI || row.vlmlajityyppi || 0) as number;
     const rajoitusarvo = row.RAJOITUSARVO != null ? row.RAJOITUSARVO as number : undefined;
     
     results.push({

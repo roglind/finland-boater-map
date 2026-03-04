@@ -105,11 +105,11 @@ export function getIconUrl(iconKey: string): string {
   return `${baseUrl}icons/${iconKey}.png`;
 }
 
+export function getDefaultIconUrl(): string {
+  return `${baseUrl}icons/merkki_default.png.svg`;
+}
+
 export function getIconUrlWithFallback(iconKey: string): string {
-  // In real implementation, this would check if file exists
-  // For now, return the primary URL
-  // The browser will handle 404s naturally, but we should implement
-  // an error handler in the Image component
   return getIconUrl(iconKey);
 }
 

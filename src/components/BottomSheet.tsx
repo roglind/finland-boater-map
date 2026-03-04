@@ -1,6 +1,6 @@
 import type { ApplicableRestriction, NearbySign } from '../types';
 import { formatRestriction } from '../logic/applicability';
-import { formatSignName, formatDistance, getIconUrl } from '../logic/nearbySigns';
+import { formatSignName, formatDistance, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import './BottomSheet.css';
 
 interface BottomSheetProps {
@@ -36,7 +36,7 @@ function BottomSheet({ restrictions, signs }: BottomSheetProps) {
                   if (target.src.includes('_')) {
                     target.src = getIconUrl(baseKey);
                   } else if (!target.src.includes('merkki_default')) {
-                    target.src = getIconUrl('merkki_default');
+                    target.src = getDefaultIconUrl();
                   } else {
                     target.classList.add('summary-sign-fallback');
                     target.alt = 'Merkki';

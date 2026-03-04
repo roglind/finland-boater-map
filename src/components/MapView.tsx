@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, NearbySign, AppFilters, RestrictionArea } from '../types';
-import { getIconUrl } from '../logic/nearbySigns';
+import { getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import { textContainsJetSki } from '../logic/applicability';
 import './MapView.css';
 
@@ -210,7 +210,7 @@ function MapView({
       img.onerror = () => {
         img.src = getIconUrl(sign.iconKey.split('_')[0]);
         img.onerror = () => {
-          img.src = getIconUrl('merkki_default');
+          img.src = getDefaultIconUrl();
           img.onerror = () => {
             img.classList.add('sign-marker-fallback');
             img.alt = 'Merkki';

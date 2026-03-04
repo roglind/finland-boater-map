@@ -114,8 +114,17 @@ export function getIconUrlWithFallback(iconKey: string): string {
 }
 
 export function formatSignName(sign: NearbySign): string {
-  if (sign.nimiFi && sign.nimiFi.trim().length > 0) return sign.nimiFi.trim();
-  if (sign.nimiSv && sign.nimiSv.trim().length > 0) return sign.nimiSv.trim();
+  const isCodeLike = (value?: string): boolean => {
+    if (!value) return false;
+    const trimmed = value.trim();
+    return /^[A-Z]{2,}\d+$/i.test(trimmed);
+  };
+
+  if (sign.nimiFi && sign.nimiFi.trim().length > 0 && !isCodeLike(sign.nimiFi)) return sign.nimiFi.trim();
+  if (sign.nimiSv && sign.nimiSv.trim().length > 0 && !isCodeLike(sign.nimiSv)) return sign.nimiSv.trim();
+  if (sign.lisakilventekstiFi && sign.lisakilventekstiFi.trim().length > 0) return sign.lisakilventekstiFi.trim();
+  if (sign.sijaintiFi && sign.sijaintiFi.trim().length > 0) return sign.sijaintiFi.trim();
+  if (sign.vaikutusalue && sign.vaikutusalue.trim().length > 0) return sign.vaikutusalue.trim();
   return `Merkkityyppi ${sign.vlmtyyppi}`;
 }
 

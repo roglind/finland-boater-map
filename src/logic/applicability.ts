@@ -87,11 +87,15 @@ export function formatRestriction(restriction: ApplicableRestriction): string {
   if (restriction.suuruusKmh != null) {
     return `Nopeusrajoitus ${restriction.suuruusKmh} km/h`;
   }
+  if (restriction.suuruusRaw && restriction.suuruusRaw.trim().length > 0) {
+    return restriction.suuruusRaw.trim();
+  }
 
   const candidates = [
     restriction.rajoitustyyppi,
     restriction.rajoitustyypit,
-    restriction.lisatieto
+    restriction.lisatieto,
+    restriction.poikkeus
   ];
   for (const value of candidates) {
     if (typeof value === 'string' && value.trim().length > 0) {

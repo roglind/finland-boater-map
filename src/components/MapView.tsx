@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { BoatPosition, NearbySign, AppFilters, RestrictionArea } from '../types';
-import { getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
+import { formatSignName, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import { textContainsJetSki } from '../logic/applicability';
 import './MapView.css';
 
@@ -206,7 +206,7 @@ function MapView({
       el.className = 'sign-marker';
       const img = document.createElement('img');
       img.src = sign.iconUrl;
-      img.alt = sign.nimiFi || 'Merkki';
+      img.alt = formatSignName(sign);
       img.onerror = () => {
         img.src = getIconUrl(sign.iconKey.split('_')[0]);
         img.onerror = () => {
@@ -223,7 +223,7 @@ function MapView({
         .setLngLat(sign.geometry.coordinates as [number, number])
         .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
           <div class="sign-popup">
-            <strong>${sign.nimiFi || sign.nimiSv || 'Merkki'}</strong>
+            <strong>${formatSignName(sign)}</strong>
             ${sign.lisakilventekstiFi ? `<p>${sign.lisakilventekstiFi}</p>` : ''}
             <p class="distance">${sign.distance} m</p>
           </div>

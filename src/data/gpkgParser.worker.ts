@@ -291,6 +291,22 @@ function deriveIconKey(vlmlajityyppi: number, rajoitusarvo?: number): string {
   return `merkki${vlmlajityyppi}`;
 }
 
+function parseNumericSuffixValue(raw: unknown): number | undefined {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return Math.trunc(raw);
+  }
+  if (typeof raw === 'string') {
+    const match = raw.match(/(\d+)/);
+    if (match) {
+      const parsed = parseInt(match[1], 10);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+const SUURUUS_SUFFIX_TYPES = new Set([11, 15, 16, 17, 19]);
+
 function parseTrafficSigns(db: Database): TrafficSign[] {
   const results: TrafficSign[] = [];
   
@@ -312,7 +328,11 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
       continue;
     }
     const vlmlajityyppi = (row.VLMLAJITYYPPI || row.vlmlajityyppi || 0) as number;
-    const rajoitusarvo = row.RAJOITUSARVO != null ? row.RAJOITUSARVO as number : undefined;
+    const rajoitusarvo = parseNumericSuffixValue(row.RAJOITUSARVO ?? row.rajoitusarvo);
+    const suuruus = parseNumericSuffixValue(row.SUURUUS ?? row.suuruus);
+    const iconSuffixSource = SUURUUS_SUFFIX_TYPES.has(vlmlajityyppi)
+      ? (suuruus ?? rajoitusarvo)
+      : rajoitusarvo;
     
     results.push({
       id: safeId,
@@ -335,7 +355,7 @@ function parseTrafficSigns(db: Database): TrafficSign[] {
       vaylat: (row.VAYLAT || row.vaylat || '') as string,
       irrotusPvm: (row.IRROTUS_PVM || row.irrotus_pvm || '') as string,
       geometry: geometry as any,
-      iconKey: deriveIconKey(vlmlajityyppi, rajoitusarvo)
+      iconKey: deriveIconKey(vlmlajityyppi, iconSuffixSource)
     });
   }
   

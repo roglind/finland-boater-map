@@ -102,11 +102,11 @@ export function getNearbySignsWithDistance(
 const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/*$/, '/');
 
 export function getIconUrl(iconKey: string): string {
-  return `${baseUrl}icons/${iconKey}.png`;
+  return `${baseUrl}images/${iconKey}.png`;
 }
 
 export function getDefaultIconUrl(): string {
-  return `${baseUrl}icons/merkki_default.png.svg`;
+  return `${baseUrl}images/merkki_default.png.svg`;
 }
 
 export function getIconUrlWithFallback(iconKey: string): string {

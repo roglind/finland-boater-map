@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/**/*.png', 'favicon.ico'],
+      includeAssets: ['images/**/*.png', 'favicon.ico'],
       manifest: {
         name: 'Finland Boater Map',
         short_name: 'Boater Map',

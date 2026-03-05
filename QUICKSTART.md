@@ -28,7 +28,7 @@ chmod +x setup.sh
 npm install
 
 # Create directories
-mkdir -p public/icons
+mkdir -p public/images
 
 # Run type check
 npm run type-check
@@ -157,7 +157,7 @@ Data is cached with ETags - won't re-download if unchanged.
 - Check browser console for specific errors
 
 ### Icons not showing
-- Icons need to be added manually to `public/icons/`
+- Icons need to be added manually to `public/images/`
 - See `ICONS.md` for icon specifications
 - Default fallback icon will show if specific icon missing
 
@@ -204,7 +204,7 @@ A: Yes! After downloading data once, app works fully offline.
 A: Check monthly, or when you know restrictions have changed.
 
 **Q: Why don't I see any icons?**
-A: Icons must be added to `public/icons/`. See ICONS.md.
+A: Icons must be added to `public/images/`. See ICONS.md.
 
 **Q: Is my data synced between devices?**
 A: No, each device stores data locally. Must update on each device.

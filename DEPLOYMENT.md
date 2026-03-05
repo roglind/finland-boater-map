@@ -4,7 +4,7 @@
 
 Before deploying, ensure you have:
 
-1. ✅ All traffic sign icons in `public/icons/`
+1. ✅ All traffic sign icons in `public/images/`
 2. ✅ App icons (`icon-192.png` and `icon-512.png`)
 3. ✅ Favicon (`favicon.ico`)
 4. ✅ Production build tested locally
@@ -191,7 +191,7 @@ sudo certbot --nginx -d boatermap.example.com
 
 - [ ] HTTPS enabled (required for geolocation API)
 - [ ] Service worker registered and working
-- [ ] All icons present in `public/icons/`
+- [ ] All icons present in `public/images/`
 - [ ] CORS headers configured for external resources
 - [ ] Compression enabled (gzip/brotli)
 - [ ] Cache headers configured properly
@@ -263,7 +263,7 @@ location.reload(true);
 ### Icons Not Loading in Production
 
 - Check CORS headers
-- Verify icon files are in dist/icons/
+- Verify icon files are in dist/images/
 - Check browser console for 404s
 
 ### Database Issues

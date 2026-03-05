@@ -201,7 +201,7 @@ See `ICONS.md` for specifications.
 ## Next Steps
 
 1. **Immediate**: Run `./setup.sh` to get started
-2. **Add Icons**: Place traffic sign PNGs in `public/icons/`
+2. **Add Icons**: Place traffic sign PNGs in `public/images/`
 3. **Test Locally**: `npm run dev`
 4. **Build**: `npm run build`
 5. **Deploy**: Follow `DEPLOYMENT.md`

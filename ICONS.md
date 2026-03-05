@@ -119,7 +119,7 @@ convert -size 128x128 xc:white \
 
 ## Testing Icons
 
-1. Place your icons in `public/icons/`
+1. Place your icons in `public/images/`
 2. Start the dev server: `npm run dev`
 3. Update data to load sign information
 4. Navigate to an area with traffic signs
@@ -154,7 +154,7 @@ Ensure you have rights to use any icons you add:
 
 ### Icons not displaying
 1. Check file names exactly match pattern
-2. Verify files are in `public/icons/` directory
+2. Verify files are in `public/images/` directory
 3. Check browser console for 404 errors
 4. Ensure `merkki_default.png` exists
 5. Verify file extensions are lowercase `.png`
@@ -174,10 +174,10 @@ Optimize all icons before deployment:
 
 ```bash
 # Using pngquant (install first)
-pngquant --quality=65-80 --ext .png --force public/icons/*.png
+pngquant --quality=65-80 --ext .png --force public/images/*.png
 
 # Or using imagemagick
-mogrify -strip -quality 85 public/icons/*.png
+mogrify -strip -quality 85 public/images/*.png
 ```
 
 This can reduce file sizes by 50-70% without visible quality loss.

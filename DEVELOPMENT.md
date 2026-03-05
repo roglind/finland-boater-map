@@ -20,7 +20,7 @@ cd boater-map-pwa
 
 # Or manual setup:
 npm install
-mkdir -p public/icons
+mkdir -p public/images
 ```
 
 ### Development Server

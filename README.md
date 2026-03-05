@@ -42,10 +42,10 @@ npm install
 
 3. Create the icons directory:
 ```bash
-mkdir -p public/icons
+mkdir -p public/images
 ```
 
-4. Add traffic sign icons to `public/icons/`:
+4. Add traffic sign icons to `public/images/`:
    - Format: `merkkiXX_YY.png` (with rajoitusarvo) or `merkkiXX.png` (without)
    - Include `merkki_default.png` as fallback
    - XX = vlmlajityyppi, YY = rajoitusarvo
@@ -197,7 +197,7 @@ After initial data download, the app works completely offline:
 - Try in HTTPS context (required for geolocation)
 
 ### Icons not displaying
-- Verify icons are in `public/icons/` directory
+- Verify icons are in `public/images/` directory
 - Check file naming: `merkkiXX_YY.png` or `merkkiXX.png`
 - Ensure `merkki_default.png` exists as fallback
 

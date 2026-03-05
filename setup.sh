@@ -31,7 +31,7 @@ echo ""
 
 # Create directories
 echo "📁 Creating directories..."
-mkdir -p public/icons
+mkdir -p public/images
 mkdir -p public
 echo "✅ Directories created"
 echo ""
@@ -40,7 +40,7 @@ echo ""
 echo "🎨 Creating placeholder icons..."
 
 # Create a simple SVG for default icon
-cat > public/icons/merkki_default.png.svg << 'EOF'
+cat > public/images/merkki_default.png.svg << 'EOF'
 <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
   <rect width="64" height="64" fill="#0A4D68"/>
   <text x="32" y="40" text-anchor="middle" fill="white" font-size="32" font-family="Arial">?</text>
@@ -88,7 +88,7 @@ echo ""
 echo "✨ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Add your traffic sign icons to public/icons/"
+echo "1. Add your traffic sign icons to public/images/"
 echo "   Format: merkkiXX_YY.png or merkkiXX.png"
 echo ""
 echo "2. Start the development server:"

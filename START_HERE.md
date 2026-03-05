@@ -205,7 +205,7 @@ boater-map-pwa/
 
 ## ⚠️ Before First Run
 
-You need to add traffic sign icons to `public/icons/`:
+You need to add traffic sign icons to `public/images/`:
 
 1. Create PNG files following naming convention:
    - `merkkiXX_YY.png` (with restriction value)
@@ -269,7 +269,7 @@ Tested and working on:
 
 ### Immediate (< 5 minutes)
 1. Run `./setup.sh`
-2. Add icon files to `public/icons/`
+2. Add icon files to `public/images/`
 3. Run `npm run dev`
 4. Test in browser
 

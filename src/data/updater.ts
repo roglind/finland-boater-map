@@ -1,8 +1,10 @@
-import { db, setLastUpdated, getMeta, setMeta } from './db';
+import { db, setLastUpdated, getMeta, getParserVersion, setParserVersion, setMeta } from './db';
 import type { RestrictionArea, TrafficSign, UpdateStatus } from '../types';
 
 const RAJOITUS_URL = '/finland-boater-map/data/rajoitusalue_a.gpkg';
 const VESILIIKENNE_URL = '/finland-boater-map/data/vesiliikennemerkit.gpkg';
+const PARSER_VERSION = '2026-03-05-suuruus-iconkey-v1';
+const SUURUUS_SUFFIX_TYPES = new Set([11, 15, 16, 17, 19]);
 
 export class DataUpdater {
   private worker: Worker | null = null;
@@ -25,20 +27,32 @@ export class DataUpdater {
     this.updateStatus({ isUpdating: true, progress: 0, message: 'Aloitetaan päivitys...' });
     
     try {
+      const storedParserVersion = await getParserVersion();
+      const parserVersionChanged = storedParserVersion !== PARSER_VERSION;
+
       // Fetch both files in parallel
-      this.updateStatus({ progress: 10, message: 'Ladataan rajoitusalueet...' });
-      const rajoitusPromise = this.fetchFile(RAJOITUS_URL, 'rajoitus');
+      this.updateStatus({
+        progress: 10,
+        message: parserVersionChanged
+          ? 'Parseri paivittynyt, ladataan aineistot uudelleen...'
+          : 'Ladataan rajoitusalueet...'
+      });
+      const rajoitusPromise = this.fetchFile(RAJOITUS_URL, 'rajoitus', parserVersionChanged);
       
       this.updateStatus({ progress: 30, message: 'Ladataan liikennemerkit...' });
-      const vesiliikennePromise = this.fetchFile(VESILIIKENNE_URL, 'vesiliikenne');
+      const vesiliikennePromise = this.fetchFile(VESILIIKENNE_URL, 'vesiliikenne', parserVersionChanged);
       
       const [rajoitusBuffer, vesiliikenneBuffer] = await Promise.all([
         rajoitusPromise,
         vesiliikennePromise
       ]);
 
-      // If data not modified, we're done
-      if (!rajoitusBuffer || !vesiliikenneBuffer) {
+      if (parserVersionChanged && (!rajoitusBuffer || !vesiliikenneBuffer)) {
+        throw new Error('Parseri paivittyi, mutta aineistoa ei voitu hakea uudelleen kokonaan.');
+      }
+
+      // If neither dataset changed and parser did not change, we're done
+      if (!rajoitusBuffer && !vesiliikenneBuffer && !parserVersionChanged) {
         this.updateStatus({ 
           isUpdating: false, 
           progress: 100, 
@@ -50,24 +64,49 @@ export class DataUpdater {
        return;
       }
 
-      this.updateStatus({ progress: 50, message: 'Käsitellään rajoitusalueet...' });
-      const restrictionAreas = await this.parseInWorker(rajoitusBuffer, 'rajoitus') as RestrictionArea[];
+      let restrictionAreas: RestrictionArea[] | null = null;
+      let trafficSigns: TrafficSign[] | null = null;
 
-      this.updateStatus({ progress: 70, message: 'Käsitellään liikennemerkit...' });
-      const trafficSigns = await this.parseInWorker(vesiliikenneBuffer, 'vesiliikenne') as TrafficSign[];
+      if (rajoitusBuffer) {
+        this.updateStatus({ progress: 50, message: 'Käsitellään rajoitusalueet...' });
+        restrictionAreas = await this.parseInWorker(rajoitusBuffer, 'rajoitus') as RestrictionArea[];
+      }
+
+      if (vesiliikenneBuffer) {
+        this.updateStatus({ progress: 70, message: 'Käsitellään liikennemerkit...' });
+        trafficSigns = await this.parseInWorker(vesiliikenneBuffer, 'vesiliikenne') as TrafficSign[];
+        this.logIconKeySuffixSamples(trafficSigns);
+      }
 
       this.updateStatus({ progress: 85, message: 'Tallennetaan tietokantaan...' });
-      await this.storeData(restrictionAreas, trafficSigns);
+      if (restrictionAreas) {
+        await this.storeRestrictionAreas(restrictionAreas);
+      }
+      if (trafficSigns) {
+        await this.storeTrafficSigns(trafficSigns);
+      }
 
       // Update timestamps
       const now = new Date().toISOString();
-      await setLastUpdated('rajoitus', now);
-      await setLastUpdated('vesiliikenne', now);
+      if (restrictionAreas) {
+        await setLastUpdated('rajoitus', now);
+      }
+      if (trafficSigns) {
+        await setLastUpdated('vesiliikenne', now);
+      }
+      await setParserVersion(PARSER_VERSION);
+
+      const restrictionCount = restrictionAreas
+        ? restrictionAreas.length
+        : await db.restriction_areas.count();
+      const signCount = trafficSigns
+        ? trafficSigns.length
+        : await db.traffic_signs.count();
       
       this.updateStatus({ 
         isUpdating: false, 
         progress: 100, 
-        message: 'Päivitys valmis!' 
+        message: `Päivitys valmis! ${restrictionCount} rajoitusaluetta ja ${signCount} merkkiä`
       });
       
       // Clear success message after 3 seconds
@@ -86,15 +125,26 @@ export class DataUpdater {
     }
   }
   
-  private async fetchFile(url: string, type: 'rajoitus' | 'vesiliikenne'): Promise<ArrayBuffer | null> {
+  private async fetchFile(
+    url: string,
+    type: 'rajoitus' | 'vesiliikenne',
+    forceRefresh: boolean = false
+  ): Promise<ArrayBuffer | null> {
     const etag = await getMeta(`${type}_etag`);
     
     const headers: HeadersInit = {};
-    if (etag) {
+    if (etag && !forceRefresh) {
       headers['If-None-Match'] = etag;
     }
     
-    const response = await fetch(url, { headers });
+    const requestUrl = forceRefresh
+      ? `${url}${url.includes('?') ? '&' : '?'}parser_version=${encodeURIComponent(PARSER_VERSION)}`
+      : url;
+
+    const response = await fetch(requestUrl, {
+      headers,
+      cache: forceRefresh ? 'no-store' : 'default'
+    });
     
     if (response.status === 304) return null; 
     
@@ -139,16 +189,28 @@ export class DataUpdater {
     });
   }
   
-  private async storeData(restrictionAreas: RestrictionArea[], trafficSigns: TrafficSign[]): Promise<void> {
-    await db.transaction('rw', [db.restriction_areas, db.traffic_signs], async () => {
-      // Clear existing data
+  private async storeRestrictionAreas(restrictionAreas: RestrictionArea[]): Promise<void> {
+    await db.transaction('rw', [db.restriction_areas], async () => {
       await db.restriction_areas.clear();
-      await db.traffic_signs.clear();
-      
-      // Bulk insert new data
       await db.restriction_areas.bulkAdd(restrictionAreas);
+    });
+  }
+
+  private async storeTrafficSigns(trafficSigns: TrafficSign[]): Promise<void> {
+    await db.transaction('rw', [db.traffic_signs], async () => {
+      await db.traffic_signs.clear();
       await db.traffic_signs.bulkAdd(trafficSigns);
     });
+  }
+
+  private logIconKeySuffixSamples(trafficSigns: TrafficSign[]): void {
+    const withSuffix = trafficSigns
+      .filter((sign) => SUURUUS_SUFFIX_TYPES.has(sign.vlmlajityyppi) && /_\d+$/.test(sign.iconKey))
+      .slice(0, 8)
+      .map((sign) => sign.iconKey);
+    if (withSuffix.length > 0) {
+      console.info('[DataUpdater] SUURUUS iconKey samples:', withSuffix);
+    }
   }
   
   cleanup() {

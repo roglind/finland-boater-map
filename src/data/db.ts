@@ -23,6 +23,7 @@ export class BoaterMapDB extends Dexie {
 }
 
 export const db = new BoaterMapDB();
+const PARSER_VERSION_META_KEY = 'parser_version';
 
 // Helper functions for meta storage
 export const getMeta = async (key: string): Promise<any> => {
@@ -40,4 +41,13 @@ export const getLastUpdated = async (dataType: 'rajoitus' | 'vesiliikenne'): Pro
 
 export const setLastUpdated = async (dataType: 'rajoitus' | 'vesiliikenne', timestamp: string): Promise<void> => {
   await setMeta(`${dataType}_lastUpdated`, timestamp);
+};
+
+export const getParserVersion = async (): Promise<string | null> => {
+  const version = await getMeta(PARSER_VERSION_META_KEY);
+  return typeof version === 'string' ? version : null;
+};
+
+export const setParserVersion = async (version: string): Promise<void> => {
+  await setMeta(PARSER_VERSION_META_KEY, version);
 };

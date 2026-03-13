@@ -32,11 +32,15 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: Bott
                 <div key={idx} className="summary-area-sign-block">
                   <img
                     className="summary-area-sign-icon"
-                    src={getIconUrl(item.iconKey)}
+                    src={item.iconKey === 'merkki_default' ? getDefaultIconUrl() : getIconUrl(item.iconKey)}
                     alt={item.label}
                     title={item.label}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
+                      if (item.iconKey === 'merkki_default') {
+                        target.classList.add('summary-sign-fallback');
+                        return;
+                      }
                       const baseKey = item.iconKey.split('_')[0];
                       if (target.src.includes('_')) {
                         target.src = getIconUrl(baseKey);

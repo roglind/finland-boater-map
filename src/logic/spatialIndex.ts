@@ -19,14 +19,12 @@ export class SpatialIndex {
     const nodes: SpatialIndexNode[] = [];
     
     for (const area of areas) {
+      const [minX, minY, maxX, maxY] = area.bbox ?? [];
+      if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+        continue;
+      }
       this.areaMap.set(area.id, area);
-      nodes.push({
-        minX: area.bbox[0],
-        minY: area.bbox[1],
-        maxX: area.bbox[2],
-        maxY: area.bbox[3],
-        id: area.id
-      });
+      nodes.push({ minX, minY, maxX, maxY, id: area.id });
     }
     
     this.areaIndex.clear();

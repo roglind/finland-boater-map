@@ -57,11 +57,29 @@ function itemKey(vlmlajityyppi: number, suuruusKmh?: number, suuruusRaw?: string
 }
 
 /**
+ * Build fallback display item when rajoitustyypit is empty - use restriction's own fields.
+ */
+function buildFallbackItem(r: ApplicableRestriction): RestrictionDisplayItem {
+  const label =
+    r.suuruusKmh != null
+      ? `Nopeusrajoitus ${r.suuruusKmh} km/h`
+      : r.suuruusRaw?.trim() || r.rajoitustyyppi?.trim() || r.lisatieto?.trim() || r.poikkeus?.trim() || 'Rajoitus';
+  return {
+    vlmlajityyppi: 0,
+    iconKey: 'merkki_default',
+    label,
+    poikkeus: r.poikkeus?.trim() || undefined,
+    lisatieto: r.lisatieto?.trim() || undefined
+  };
+}
+
+/**
  * Build display items from applicable restrictions.
  * - Uses rajoitustyypit to determine traffic sign types (vlmlajityyppi).
  * - For speed signs, suuruus holds the limit; when multiple areas overlap, show the higher speed limit.
  * - Deduplicates: same sign type + same value shown once.
  * - poikkeus and lisatieto are included when present.
+ * - Fallback: when rajoitustyypit is empty, creates items from rajoitustyyppi/suuruus/lisatieto/poikkeus.
  */
 export function getRestrictionDisplayItems(
   restrictions: ApplicableRestriction[]
@@ -71,8 +89,16 @@ export function getRestrictionDisplayItems(
   const byKey = new Map<string, RestrictionDisplayItem>();
 
   for (const r of restrictions) {
-    const vlmlajityyppit = parseRajoitustyypit(r.rajoitustyypit);
-    if (vlmlajityyppit.length === 0) continue;
+    let vlmlajityyppit = parseRajoitustyypit(r.rajoitustyypit);
+    if (vlmlajityyppit.length === 0) {
+      vlmlajityyppit = parseRajoitustyypit(r.rajoitustyyppi || '');
+    }
+    if (vlmlajityyppit.length === 0) {
+      const fallback = buildFallbackItem(r);
+      const key = `fallback:${r.id}`;
+      if (!byKey.has(key)) byKey.set(key, fallback);
+      continue;
+    }
 
     for (const vlmlajityyppi of vlmlajityyppit) {
       const suuruusKmh = r.suuruusKmh;
@@ -102,9 +128,11 @@ export function getRestrictionDisplayItems(
     }
   }
 
-  const items = Array.from(byKey.values());
-  // Sort: speed limits first (by value descending = higher first), then by vlmlajityyppi
-  items.sort((a, b) => {
+  let items = Array.from(byKey.values());
+  // Put fallback items (vlmlajityyppi 0) at end
+  items = items.sort((a, b) => {
+    if (a.vlmlajityyppi === 0 && b.vlmlajityyppi !== 0) return 1;
+    if (a.vlmlajityyppi !== 0 && b.vlmlajityyppi === 0) return -1;
     const aIsSpeed = SUURUUS_SUFFIX_TYPES.has(a.vlmlajityyppi);
     const bIsSpeed = SUURUUS_SUFFIX_TYPES.has(b.vlmlajityyppi);
     if (aIsSpeed && bIsSpeed) {
@@ -117,7 +145,7 @@ export function getRestrictionDisplayItems(
     if (aIsSpeed) return -1;
     if (bIsSpeed) return 1;
     return a.vlmlajityyppi - b.vlmlajityyppi;
-  });
+  }));
 
   return items;
 }

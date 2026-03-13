@@ -161,70 +161,74 @@ function App() {
 
   useEffect(() => {
     if (!dataLoaded) return;
-    const effectiveMode: EvalMode = mode === 'gps' && boatPosition ? 'gps' : 'viewport';
-    const position =
-      effectiveMode === 'gps'
-        ? boatPosition!
-        : viewport?.center ?? boatPosition ?? FALLBACK_POSITION;
+    try {
+      const effectiveMode: EvalMode = mode === 'gps' && boatPosition ? 'gps' : 'viewport';
+      const position =
+        effectiveMode === 'gps'
+          ? boatPosition!
+          : viewport?.center ?? boatPosition ?? FALLBACK_POSITION;
 
-    const now = Date.now();
-    if (effectiveMode === 'gps') {
-      if (now - lastEvaluatedAtRef.current < 1000) return;
-      if (lastEvaluatedPositionRef.current) {
-        const lastPos = lastEvaluatedPositionRef.current;
-        const latDiff = Math.abs(position.lat - lastPos.lat);
-        const lngDiff = Math.abs(position.lng - lastPos.lng);
-        const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
-        if (movedMeters < 10) return;
+      const now = Date.now();
+      if (effectiveMode === 'gps') {
+        if (now - lastEvaluatedAtRef.current < 1000) return;
+        if (lastEvaluatedPositionRef.current) {
+          const lastPos = lastEvaluatedPositionRef.current;
+          const latDiff = Math.abs(position.lat - lastPos.lat);
+          const lngDiff = Math.abs(position.lng - lastPos.lng);
+          const movedMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
+          if (movedMeters < 10) return;
+        }
       }
-    }
 
-    lastEvaluatedAtRef.current = now;
-    lastEvaluatedPositionRef.current = position;
+      lastEvaluatedAtRef.current = now;
+      lastEvaluatedPositionRef.current = position;
 
-    const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.1);
-    const applicable = getApplicableRestrictions(candidateAreas, position, filters);
-    setApplicableRestrictions(applicable);
+      const candidateAreas = spatialIndex.getCandidateAreas(position.lng, position.lat, 0.1);
+      const applicable = getApplicableRestrictions(candidateAreas, position, filters);
+      setApplicableRestrictions(applicable);
 
-    const allSigns = spatialIndex.getAllSigns();
-    const areaSource =
-      effectiveMode === 'gps'
-        ? applicable
-        : viewport?.bounds
-          ? spatialIndex.getAreasInBbox(
-              viewport.bounds.sw.lng,
-              viewport.bounds.sw.lat,
-              viewport.bounds.ne.lng,
-              viewport.bounds.ne.lat
-            )
-          : [];
+      const allSigns = spatialIndex.getAllSigns();
+      const areaSource =
+        effectiveMode === 'gps'
+          ? applicable
+          : viewport?.bounds
+            ? spatialIndex.getAreasInBbox(
+                viewport.bounds.sw.lng,
+                viewport.bounds.sw.lat,
+                viewport.bounds.ne.lng,
+                viewport.bounds.ne.lat
+              )
+            : [];
 
-    const areaNearby = signsToNearbySigns(getSignsInAreas(areaSource, allSigns), position, filters);
-    const radius = effectiveMode === 'gps'
-      ? filters.nearbyRadius
-      : Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M);
-    const radiusNearby = getNearbySignsWithDistance(
-      spatialIndex.getNearbySignsInRadius(position.lng, position.lat, radius),
-      position,
-      { ...filters, nearbyRadius: radius }
-    );
+      const areaNearby = signsToNearbySigns(getSignsInAreas(areaSource, allSigns), position, filters);
+      const radius = effectiveMode === 'gps'
+        ? filters.nearbyRadius
+        : Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M);
+      const radiusNearby = getNearbySignsWithDistance(
+        spatialIndex.getNearbySignsInRadius(position.lng, position.lat, radius),
+        position,
+        { ...filters, nearbyRadius: radius }
+      );
 
-    const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
-    setNearbySigns(merged);
-    setRestrictionDisplayItems(getRestrictionDisplayItems(applicable));
+      const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
+      setNearbySigns(merged);
+      setRestrictionDisplayItems(getRestrictionDisplayItems(applicable));
 
-    if (import.meta.env.DEV) {
-      console.debug('[recompute]', {
-        mode: effectiveMode,
-        indexedAreas: spatialIndex.getAllAreas().length,
-        indexedSigns: allSigns.length,
-        candidateAreas: candidateAreas.length,
-        applicableAreas: applicable.length,
-        areaSigns: areaNearby.length,
-        radiusSigns: radiusNearby.length,
-        mergedSigns: merged.length,
-        markersRendered: markersRenderedRef.current
-      });
+      if (import.meta.env.DEV) {
+        console.debug('[recompute]', {
+          mode: effectiveMode,
+          indexedAreas: spatialIndex.getAllAreas().length,
+          indexedSigns: allSigns.length,
+          candidateAreas: candidateAreas.length,
+          applicableAreas: applicable.length,
+          areaSigns: areaNearby.length,
+          radiusSigns: radiusNearby.length,
+          mergedSigns: merged.length,
+          markersRendered: markersRenderedRef.current
+        });
+      }
+    } catch (err) {
+      console.error('Position evaluation error:', err);
     }
   }, [dataLoaded, dataVersion, filters, mode, boatPosition, viewport]);
   

@@ -47,6 +47,7 @@ function App() {
   const [boatPosition, setBoatPosition] = useState<BoatPosition | null>(null);
   const [applicableRestrictions, setApplicableRestrictions] = useState<ApplicableRestriction[]>([]);
   const [nearbySigns, setNearbySigns] = useState<NearbySign[]>([]);
+  const [signsInRestrictionAreas, setSignsInRestrictionAreas] = useState<NearbySign[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [availableVlmtyyppi, setAvailableVlmtyyppi] = useState<number[]>([]);
@@ -209,6 +210,7 @@ function App() {
 
     const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
     setNearbySigns(merged);
+    setSignsInRestrictionAreas(areaNearby);
 
     if (import.meta.env.DEV) {
       console.debug('[recompute]', {
@@ -261,6 +263,7 @@ function App() {
       <BottomSheet 
         restrictions={applicableRestrictions}
         signs={nearbySigns}
+        signsInRestrictionAreas={signsInRestrictionAreas}
       />
       
       {showSettings && (

@@ -106,7 +106,7 @@ export function getIconUrl(iconKey: string): string {
 }
 
 export function getDefaultIconUrl(): string {
-  return `${baseUrl}images/merkki_default.png.svg`;
+  return `${baseUrl}images/merkki_default.png`;
 }
 
 export function getIconUrlWithFallback(iconKey: string): string {

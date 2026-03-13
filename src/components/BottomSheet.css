@@ -74,6 +74,19 @@
   white-space: nowrap;
 }
 
+.summary-area-signs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.summary-area-sign-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
 @media (max-width: 768px) {
   .bottom-sheet {
     height: 10vh;

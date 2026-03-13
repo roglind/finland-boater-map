@@ -76,15 +76,45 @@
 
 .summary-area-signs {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.25rem;
   margin-top: 0.2rem;
+  max-height: 4rem;
+  overflow-y: auto;
 }
 
-.summary-area-sign-icon {
+.summary-area-sign-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.summary-area-sign-block .summary-area-sign-icon {
   width: 1.4rem;
   height: 1.4rem;
+  min-width: 1.4rem;
   object-fit: contain;
+}
+
+.summary-area-sign-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.summary-area-sign-label {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--dark-text);
+}
+
+.summary-area-extra {
+  font-size: 0.7rem;
+  color: #64748B;
+  font-style: italic;
 }
 
 @media (max-width: 768px) {

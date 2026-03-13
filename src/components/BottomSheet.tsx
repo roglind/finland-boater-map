@@ -1,65 +1,60 @@
 import type { ApplicableRestriction, NearbySign } from '../types';
-import { formatRestriction } from '../logic/applicability';
 import { formatSignName, formatDistance, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
+import type { RestrictionDisplayItem } from '../logic/restrictionDisplay';
 import './BottomSheet.css';
 
 interface BottomSheetProps {
   restrictions: ApplicableRestriction[];
   signs: NearbySign[];
-  signsInRestrictionAreas?: NearbySign[];
+  restrictionDisplayItems?: RestrictionDisplayItem[];
 }
 
-function getRestrictionDisplay(
-  primaryRestriction: ApplicableRestriction | undefined,
-  signsInRestrictionAreas: NearbySign[],
-  formatRestriction: (r: ApplicableRestriction) => string,
-  formatSignName: (s: NearbySign) => string
-): string {
-  if (!primaryRestriction) return 'Ei rajoituksia';
-  const restrictionText = formatRestriction(primaryRestriction);
-  if (restrictionText !== 'Rajoitus') return restrictionText;
-  if (signsInRestrictionAreas.length === 0) return 'Rajoitus';
-  const uniqueNames = [...new Set(signsInRestrictionAreas.map(formatSignName).filter(Boolean))];
-  return uniqueNames.join(', ') || 'Rajoitus';
-}
-
-function BottomSheet({ restrictions, signs, signsInRestrictionAreas = [] }: BottomSheetProps) {
-  const primaryRestriction = restrictions[0];
+function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: BottomSheetProps) {
   const nearestSign = signs[0];
-  const restrictionDisplay = getRestrictionDisplay(
-    primaryRestriction,
-    signsInRestrictionAreas,
-    formatRestriction,
-    formatSignName
-  );
+  const primaryItem = restrictionDisplayItems[0];
+  const restrictionLabel = primaryItem
+    ? primaryItem.label
+    : restrictions.length > 0
+      ? 'Rajoitus'
+      : 'Ei rajoituksia';
 
   return (
     <div className="bottom-sheet">
       <div className="summary-grid">
         <div className="summary-cell">
           <div className="summary-title">Rajoitus</div>
-          <div className="summary-value" title={restrictionDisplay}>
-            {restrictionDisplay}
+          <div className="summary-value" title={restrictionLabel}>
+            {restrictionLabel}
           </div>
-          {signsInRestrictionAreas.length > 0 && (
+          {restrictionDisplayItems.length > 0 && (
             <div className="summary-area-signs">
-              {signsInRestrictionAreas.slice(0, 5).map((sign) => (
-                <img
-                  key={sign.id}
-                  className="summary-area-sign-icon"
-                  src={sign.iconUrl}
-                  alt={formatSignName(sign)}
-                  title={formatSignName(sign)}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    const baseKey = sign.iconKey.split('_')[0];
-                    if (target.src.includes('_')) {
-                      target.src = getIconUrl(baseKey);
-                    } else {
-                      target.src = getDefaultIconUrl();
-                    }
-                  }}
-                />
+              {restrictionDisplayItems.slice(0, 6).map((item, idx) => (
+                <div key={idx} className="summary-area-sign-block">
+                  <img
+                    className="summary-area-sign-icon"
+                    src={getIconUrl(item.iconKey)}
+                    alt={item.label}
+                    title={item.label}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      const baseKey = item.iconKey.split('_')[0];
+                      if (target.src.includes('_')) {
+                        target.src = getIconUrl(baseKey);
+                      } else {
+                        target.src = getDefaultIconUrl();
+                      }
+                    }}
+                  />
+                  <div className="summary-area-sign-detail">
+                    <span className="summary-area-sign-label">{item.label}</span>
+                    {item.poikkeus && (
+                      <span className="summary-area-extra"> {item.poikkeus}</span>
+                    )}
+                    {item.lisatieto && (
+                      <span className="summary-area-extra"> {item.lisatieto}</span>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}

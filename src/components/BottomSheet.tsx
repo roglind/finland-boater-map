@@ -32,7 +32,7 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: Bott
                 <div key={idx} className="summary-area-sign-block">
                   <img
                     className="summary-area-sign-icon"
-                    src={item.iconKey === 'merkki_default' ? getDefaultIconUrl() : getIconUrl(item.iconKey)}
+                    src={item.iconUrl}
                     alt={item.label}
                     title={item.label}
                     onError={(e) => {

@@ -1,4 +1,5 @@
 import type { ApplicableRestriction } from '../types';
+import { getIconUrl, getDefaultIconUrl } from './nearbySigns';
 
 /** vlmlajityyppi values that use suuruus (speed/value) in the icon key. Includes 3, 12 per ICONS.md. */
 const SUURUUS_SUFFIX_TYPES = new Set([3, 11, 12, 15, 16, 17, 19]);
@@ -6,6 +7,7 @@ const SUURUUS_SUFFIX_TYPES = new Set([3, 11, 12, 15, 16, 17, 19]);
 export interface RestrictionDisplayItem {
   vlmlajityyppi: number;
   iconKey: string;
+  iconUrl: string; // Same path as traffic signs - uses getIconUrl from nearbySigns
   label: string;
   poikkeus?: string;
   lisatieto?: string;
@@ -67,6 +69,7 @@ function buildFallbackItem(r: ApplicableRestriction): RestrictionDisplayItem {
   return {
     vlmlajityyppi: 0,
     iconKey: 'merkki_default',
+    iconUrl: getDefaultIconUrl(),
     label,
     poikkeus: r.poikkeus?.trim() || undefined,
     lisatieto: r.lisatieto?.trim() || undefined
@@ -106,9 +109,11 @@ export function getRestrictionDisplayItems(
       const key = itemKey(vlmlajityyppi, suuruusKmh, suuruusRaw || undefined);
 
       const existing = byKey.get(key);
+      const iconKey = deriveIconKey(vlmlajityyppi, suuruusKmh);
       const newItem: RestrictionDisplayItem = {
         vlmlajityyppi,
-        iconKey: deriveIconKey(vlmlajityyppi, suuruusKmh),
+        iconKey,
+        iconUrl: getIconUrl(iconKey),
         label: buildLabel(vlmlajityyppi, suuruusKmh, r.suuruusRaw, r.rajoitustyyppi),
         poikkeus: r.poikkeus?.trim() || undefined,
         lisatieto: r.lisatieto?.trim() || undefined

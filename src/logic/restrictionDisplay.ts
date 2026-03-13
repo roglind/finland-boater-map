@@ -145,7 +145,7 @@ export function getRestrictionDisplayItems(
     if (aIsSpeed) return -1;
     if (bIsSpeed) return 1;
     return a.vlmlajityyppi - b.vlmlajityyppi;
-  }));
+  });
 
   return items;
 }

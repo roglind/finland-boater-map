@@ -212,7 +212,8 @@ function App() {
 
       const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
       setNearbySigns(merged);
-      setRestrictionDisplayItems(getRestrictionDisplayItems(applicable));
+      const signsInApplicableAreas = getSignsInAreas(applicable, allSigns);
+      setRestrictionDisplayItems(getRestrictionDisplayItems(applicable, signsInApplicableAreas));
 
       if (import.meta.env.DEV) {
         console.debug('[recompute]', {

@@ -39,11 +39,12 @@ echo ""
 # Create placeholder icons
 echo "🎨 Creating placeholder icons..."
 
-# Create a simple SVG for default icon
-cat > public/images/merkki_default.png.svg << 'EOF'
-<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#0A4D68"/>
-  <text x="32" y="40" text-anchor="middle" fill="white" font-size="32" font-family="Arial">?</text>
+# Create a simple SVG for default icon (used when specific sign icon is missing)
+cat > public/images/merkki_default.svg << 'EOF'
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Traffic sign">
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="#ffffff" stroke="#0A4D68" stroke-width="4"/>
+  <circle cx="32" cy="28" r="10" fill="#0A4D68"/>
+  <rect x="30" y="38" width="4" height="12" rx="2" fill="#0A4D68"/>
 </svg>
 EOF
 

@@ -39,7 +39,7 @@ function App() {
   });
 
   const [filters, setFilters] = useState<AppFilters>({
-    ammattiliikenne: true,
+    lisatietoja: true,
     vesiskootteri: true,
     selectedVlmtyyppi: new Set<number>(),
     nearbyRadius: 250
@@ -285,6 +285,7 @@ function App() {
         restrictions={applicableRestrictions}
         signs={nearbySigns}
         restrictionDisplayItems={restrictionDisplayItems}
+        filters={filters}
       />
       
       {showSettings && (

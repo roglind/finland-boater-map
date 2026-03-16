@@ -23,7 +23,6 @@ function buildRestrictionsGeoJSON(areas: RestrictionArea[]): GeoJSON.FeatureColl
         type: 'Feature' as const,
         properties: {
           id: r.id,
-          isAmmattiliikenne: r.lisatieto?.toLowerCase().includes('ammatti') || false,
           isVesiskootteri: textContainsJetSki(r)
         },
         geometry: r.geometry
@@ -176,9 +175,6 @@ function MapView({
     const map = mapRef.current;
     const filterExpr: any[] = ['all'];
 
-    if (!filters.ammattiliikenne) {
-      filterExpr.push(['!=', ['get', 'isAmmattiliikenne'], true]);
-    }
     if (!filters.vesiskootteri) {
       filterExpr.push(['!=', ['get', 'isVesiskootteri'], true]);
     }

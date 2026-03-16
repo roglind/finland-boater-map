@@ -32,10 +32,6 @@ export function isRestrictionApplicable(
     if (now > endDate) return false;
   }
 
-  if (!filters.ammattiliikenne && restriction.poikkeus) {
-    if (restriction.poikkeus.toLowerCase().includes('huvi')) return false;
-  }
-
   if (!filters.vesiskootteri && textContainsJetSki(restriction)) {
     return false;
   }

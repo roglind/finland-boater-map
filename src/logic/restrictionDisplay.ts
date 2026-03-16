@@ -30,10 +30,6 @@ export interface RestrictionDisplayItem {
   label: string;
   poikkeus?: string;
   lisatieto?: string;
-  /** Debug: raw rajoitustyypit from restriction (e.g. "01, 02") */
-  debugRajoitustyypit?: string;
-  /** Debug: suuruus value from restriction (suuruusRaw or suuruusKmh) */
-  debugSuuruus?: string;
 }
 
 /**
@@ -105,8 +101,6 @@ function buildFallbackItem(r: ApplicableRestriction): RestrictionDisplayItem {
     label,
     poikkeus: r.poikkeus?.trim() || undefined,
     lisatieto: r.lisatieto?.trim() || undefined,
-    debugRajoitustyypit: r.rajoitustyypit?.trim() || undefined,
-    debugSuuruus: r.suuruusKmh != null ? String(r.suuruusKmh) : r.suuruusRaw?.trim() || undefined
   };
 }
 
@@ -152,8 +146,6 @@ export function getRestrictionDisplayItems(
         label: buildLabel(vlmlajityyppi, suuruusKmh, r.suuruusRaw, r.rajoitustyyppi),
         poikkeus: r.poikkeus?.trim() || undefined,
         lisatieto: r.lisatieto?.trim() || undefined,
-        debugRajoitustyypit: r.rajoitustyypit?.trim() || undefined,
-        debugSuuruus: r.suuruusKmh != null ? String(r.suuruusKmh) : r.suuruusRaw?.trim() || undefined
       };
 
       if (existing) {

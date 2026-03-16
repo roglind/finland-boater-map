@@ -117,11 +117,6 @@
   font-style: italic;
 }
 
-.summary-area-debug {
-  font-size: 0.75rem;
-  color: #666;
-}
-
 @media (max-width: 768px) {
   .bottom-sheet {
     height: auto;

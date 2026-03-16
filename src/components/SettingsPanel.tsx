@@ -43,14 +43,14 @@ function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose }:
               <label className="switch-label">
                 <input
                   type="checkbox"
-                  checked={filters.ammattiliikenne}
-                  onChange={(e) => onFilterChange('ammattiliikenne', e.target.checked)}
+                  checked={filters.lisatietoja}
+                  onChange={(e) => onFilterChange('lisatietoja', e.target.checked)}
                 />
                 <span className="switch" />
-                <span className="label-text">Ammattiliikenne</span>
+                <span className="label-text">Lisätietoja</span>
               </label>
               <p className="setting-description">
-                Kun pois päältä, piilotetaan rajoitukset joissa poikkeus sisältää "huvi"
+                Kun päällä, näytetään poikkeus- ja lisätietotekstit alueiden merkkien yhteydessä
               </p>
             </div>
             

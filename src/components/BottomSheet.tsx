@@ -1,4 +1,4 @@
-import type { ApplicableRestriction, NearbySign } from '../types';
+import type { ApplicableRestriction, NearbySign, AppFilters } from '../types';
 import { formatSignName, formatDistance, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import type { RestrictionDisplayItem } from '../logic/restrictionDisplay';
 import './BottomSheet.css';
@@ -7,9 +7,10 @@ interface BottomSheetProps {
   restrictions: ApplicableRestriction[];
   signs: NearbySign[];
   restrictionDisplayItems?: RestrictionDisplayItem[];
+  filters: AppFilters;
 }
 
-function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: BottomSheetProps) {
+function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filters }: BottomSheetProps) {
   const nearestSign = signs[0];
   const primaryItem = restrictionDisplayItems[0];
   const restrictionLabel = primaryItem
@@ -51,16 +52,11 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: Bott
                   />
                   <div className="summary-area-sign-detail">
                     <span className="summary-area-sign-label">{item.label}</span>
-                    {item.poikkeus && (
+                    {filters.lisatietoja && item.poikkeus && (
                       <span className="summary-area-extra"> {item.poikkeus}</span>
                     )}
-                    {item.lisatieto && (
+                    {filters.lisatietoja && item.lisatieto && (
                       <span className="summary-area-extra"> {item.lisatieto}</span>
-                    )}
-                    {(item.debugRajoitustyypit != null || item.debugSuuruus != null) && (
-                      <span className="summary-area-debug">
-                        rajoitustyypit: {item.debugRajoitustyypit ?? '—'} | suuruus: {item.debugSuuruus ?? '—'} | iconKey: {item.iconKey}
-                      </span>
                     )}
                   </div>
                 </div>

@@ -213,30 +213,65 @@ interface ParseErrorMessage {
   throw new Error(`Unsupported geometry type: ${geomType}`);
 }
 
+/**
+ * Discover the actual column names in rajoitusalue_a at runtime via PRAGMA.
+ * sql.js returns getAsObject() keys in the schema's actual case, not the case
+ * used in the SELECT statement. We therefore use explicit lowercase ASCII
+ * aliases for all columns to guarantee consistent key names.
+ *
+ * The three columns with Finnish special characters (ä) are looked up by their
+ * ASCII stem so they work regardless of encoding or exact casing in the file.
+ */
+function discoverFinnishColumns(db: Database): {
+  lisatieto: string;
+  alkupvm: string;
+  loppupvm: string;
+} {
+  const result = db.exec("PRAGMA table_info(rajoitusalue_a)");
+  const colNames: string[] = (result[0]?.values ?? []).map(
+    (r) => (r[1] as string) ?? ''
+  );
+
+  // Match by ASCII stem (case-insensitive) to cope with ä encoding variants
+  const find = (stem: string) =>
+    colNames.find((c) => c.toLowerCase().replace(/[^a-z0-9_]/g, '').startsWith(stem)) ?? stem;
+
+  return {
+    lisatieto:  find('lisatieto'),
+    alkupvm:    find('alkup'),
+    loppupvm:   find('loppup'),
+  };
+}
+
 function parseRestrictionAreas(db: Database): RestrictionArea[] {
   const results: RestrictionArea[] = [];
-  
-  const stmt = db.prepare(`
-    SELECT 
-      fid as id,
-      RAJOITUSTYYPPI,
-      RAJOITUSTYYPIT,
-      SUURUUS,
-      PITUUS,
-      POIKKEUS,
-      "LISÄTIETO",
-      PAATOSTILA,
-      "ALKUPÄIVÄMÄÄRÄ",
-      "LOPPUPÄIVÄMÄÄRÄ",
-      DIAARINUMERO,
-      TIETOLAHDE,
-      JNRO,
-      NIMISIJAINTI,
-      IRROTUS_PVM,
+
+  // Discover actual Finnish-character column names at runtime
+  const finnishCols = discoverFinnishColumns(db);
+
+  const sql = `
+    SELECT
+      fid                             as id,
+      RAJOITUSTYYPPI                  as rajoitustyyppi,
+      RAJOITUSTYYPIT                  as rajoitustyypit,
+      SUURUUS                         as suuruus,
+      PITUUS                          as pituus,
+      POIKKEUS                        as poikkeus,
+      "${finnishCols.lisatieto}"      as lisatieto,
+      PAATOSTILA                      as paatostila,
+      "${finnishCols.alkupvm}"        as alkupaivamaara,
+      "${finnishCols.loppupvm}"       as loppupaivamaara,
+      DIAARINUMERO                    as diaarinumero,
+      TIETOLAHDE                      as tietolahde,
+      JNRO                            as jnro,
+      NIMISIJAINTI                    as nimisijainti,
+      IRROTUS_PVM                     as irrotus_pvm,
       geom
     FROM rajoitusalue_a
-  `);
-  
+  `;
+
+  const stmt = db.prepare(sql);
+
   while (stmt.step()) {
     const row = stmt.getAsObject();
     const geomWKB = row.geom as Uint8Array;
@@ -245,41 +280,41 @@ function parseRestrictionAreas(db: Database): RestrictionArea[] {
     // Transform coordinates from ETRS-TM35FIN to WGS84
     geometry.coordinates = transformCoordinates(geometry.coordinates);
 
-    // Parse SUURUUS for numeric value
-    const uniqueId = row.id || row.fid || results.length;
+    // Parse suuruus for numeric value
+    const uniqueId = row.id ?? results.length;
     const safeId = typeof uniqueId === 'number' ? uniqueId : parseInt(String(uniqueId)) || results.length;
-    const suuruusRaw = (row.SUURUUS as string) || '';
+    const suuruusRaw = (row.suuruus as string) || '';
     const suuruusMatch = suuruusRaw.match(/(\d+)/);
     const suuruusKmh = suuruusMatch ? parseInt(suuruusMatch[1], 10) : undefined;
 
     // Calculate bbox
-    const feat = geometry.type === 'Polygon' 
+    const feat = geometry.type === 'Polygon'
       ? polygon(geometry.coordinates)
       : multiPolygon(geometry.coordinates);
     const bboxArr = bbox(feat) as [number, number, number, number];
 
     results.push({
       id: safeId,
-      rajoitustyyppi: (row.RAJOITUSTYYPPI as string) || '',
-      rajoitustyypit: (row.RAJOITUSTYYPIT as string) || '',
+      rajoitustyyppi: (row.rajoitustyyppi as string) || '',
+      rajoitustyypit: (row.rajoitustyypit as string) || '',
       suuruusKmh,
       suuruusRaw,
-      pituusRaw: row.PITUUS as string,
-      poikkeus: row.POIKKEUS as string,
-      lisatieto: row['LISÄTIETO'] as string,
-      paatostila: row.PAATOSTILA as string,
-      alkuPvm: row['ALKUPÄIVÄMÄÄRÄ'] as string,
-      loppuPvm: row['LOPPUPÄIVÄMÄÄRÄ'] as string,
-      diaarinumero: row.DIAARINUMERO as string,
-      tietolahde: row.TIETOLAHDE as string,
-      jnro: row.JNRO as number,
-      nimisijainti: row.NIMISIJAINTI as string,
-      irrotusPvm: row.IRROTUS_PVM as string,
+      pituusRaw:    row.pituus        as string,
+      poikkeus:     row.poikkeus      as string,
+      lisatieto:    row.lisatieto     as string,
+      paatostila:   row.paatostila    as string,
+      alkuPvm:      row.alkupaivamaara  as string,
+      loppuPvm:     row.loppupaivamaara as string,
+      diaarinumero: row.diaarinumero  as string,
+      tietolahde:   row.tietolahde    as string,
+      jnro:         row.jnro          as number,
+      nimisijainti: row.nimisijainti  as string,
+      irrotusPvm:   row.irrotus_pvm   as string,
       geometry: geometry as any,
       bbox: bboxArr
     });
   }
-  
+
   stmt.free();
   return results;
 }

@@ -1,4 +1,5 @@
 import distance from '@turf/distance';
+import turfBearing from '@turf/bearing';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import type { TrafficSign, NearbySign, BoatPosition, AppFilters, RestrictionArea } from '../types';
@@ -36,7 +37,7 @@ export function getSignsInAreas(
   return out;
 }
 
-/** Convert TrafficSign[] to NearbySign[] (distance, iconUrl, vlmtyyppi filter); no radius filter. */
+/** Convert TrafficSign[] to NearbySign[] (distance, bearing, iconUrl, vlmtyyppi filter); no radius filter. */
 export function signsToNearbySigns(
   signs: TrafficSign[],
   position: BoatPosition,
@@ -50,11 +51,14 @@ export function signsToNearbySigns(
     }
     const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
     if (!isValidLngLat([lng, lat])) continue;
-    const dist = distance(boatPoint, point([lng, lat]), { units: 'meters' });
+    const signPoint = point([lng, lat]);
+    const dist = distance(boatPoint, signPoint, { units: 'meters' });
+    const bear = (turfBearing(boatPoint, signPoint) + 360) % 360;
     nearby.push({
       ...sign,
       geometry: { type: 'Point', coordinates: [lng, lat] },
       distance: Math.round(dist),
+      bearing: Math.round(bear),
       iconUrl: getIconUrl(sign.iconKey)
     });
   }
@@ -84,10 +88,12 @@ export function getNearbySignsWithDistance(
     const dist = distance(boatPoint, signPoint, { units: 'meters' });
     
     if (dist <= filters.nearbyRadius) {
+      const bear = (turfBearing(boatPoint, signPoint) + 360) % 360;
       nearby.push({
         ...sign,
         geometry: { type: 'Point', coordinates: [lng, lat] },
         distance: Math.round(dist),
+        bearing: Math.round(bear),
         iconUrl: getIconUrl(sign.iconKey)
       });
     }
@@ -133,6 +139,13 @@ export function formatDistance(meters: number): string {
     return `${meters} m`;
   }
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+const COMPASS_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+
+export function bearingToCompass(degrees: number): string {
+  const index = Math.round(((degrees % 360) + 360) % 360 / 45) % 8;
+  return COMPASS_LABELS[index];
 }
 
 // Get unique VLMTYYPPI values for filter UI

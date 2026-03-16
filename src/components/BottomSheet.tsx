@@ -1,5 +1,5 @@
 import type { ApplicableRestriction, NearbySign, AppFilters } from '../types';
-import { formatSignName, formatDistance, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
+import { formatSignName, formatDistance, bearingToCompass, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import type { RestrictionDisplayItem } from '../logic/restrictionDisplay';
 import './BottomSheet.css';
 
@@ -11,7 +11,6 @@ interface BottomSheetProps {
 }
 
 function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filters }: BottomSheetProps) {
-  const nearestSign = signs[0];
   const primaryItem = restrictionDisplayItems[0];
   const restrictionLabel = primaryItem
     ? primaryItem.label
@@ -66,32 +65,40 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filter
         </div>
 
         <div className="summary-cell">
-          <div className="summary-title">Lähin merkki</div>
-          {nearestSign ? (
-            <div className="summary-sign">
-              <img
-                className="summary-sign-icon"
-                src={nearestSign.iconUrl}
-                alt={formatSignName(nearestSign)}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  const baseKey = nearestSign.iconKey.split('_')[0];
-                  if (target.src.includes('_')) {
-                    target.src = getIconUrl(baseKey);
-                  } else if (!target.src.includes('merkki_default')) {
-                    target.src = getDefaultIconUrl();
-                  } else {
-                    target.classList.add('summary-sign-fallback');
-                    target.alt = 'Merkki';
-                  }
-                }}
-              />
-              <div className="summary-sign-text" title={`${formatSignName(nearestSign)} (${formatDistance(nearestSign.distance)})`}>
-                {formatSignName(nearestSign)} ({formatDistance(nearestSign.distance)})
-              </div>
+          <div className="summary-title">Läheiset merkit</div>
+          {signs.length > 0 ? (
+            <div className="summary-nearby-signs">
+              {signs.map((sign) => (
+                <div key={sign.id} className="summary-area-sign-block">
+                  <img
+                    className="summary-area-sign-icon"
+                    src={sign.iconUrl}
+                    alt={formatSignName(sign)}
+                    title={formatSignName(sign)}
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      const baseKey = sign.iconKey.split('_')[0];
+                      if (target.src.includes('_')) {
+                        target.src = getIconUrl(baseKey);
+                      } else if (!target.src.includes('merkki_default')) {
+                        target.src = getDefaultIconUrl();
+                      } else {
+                        target.classList.add('summary-sign-fallback');
+                        target.alt = 'Merkki';
+                      }
+                    }}
+                  />
+                  <div className="summary-area-sign-detail">
+                    <span className="summary-area-sign-label">{formatSignName(sign)}</span>
+                    <span className="summary-sign-location">
+                      {formatDistance(sign.distance)} {bearingToCompass(sign.bearing)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="summary-value">Ei merkkejä</div>
+            <div className="summary-value">Ei merkkejä lähellä</div>
           )}
         </div>
       </div>

@@ -75,6 +75,7 @@ export interface ApplicableRestriction extends RestrictionArea {
 
 export interface NearbySign extends TrafficSign {
   distance: number; // meters
+  bearing: number;  // degrees 0–360 from boat to sign
   iconUrl: string;
 }
 

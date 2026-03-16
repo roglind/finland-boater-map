@@ -211,7 +211,7 @@ function App() {
       );
 
       const merged = mergeNearbySigns(areaNearby, radiusNearby)
-        .filter(s => s.distance <= radius)
+        .filter(s => s.distance <= filters.nearbyRadius)
         .slice(0, 50);
       setNearbySigns(merged);
       setRestrictionDisplayItems(getRestrictionDisplayItems(applicable));

@@ -210,7 +210,9 @@ function App() {
         { ...filters, nearbyRadius: radius }
       );
 
-      const merged = mergeNearbySigns(areaNearby, radiusNearby).slice(0, 50);
+      const merged = mergeNearbySigns(areaNearby, radiusNearby)
+        .filter(s => s.distance <= radius)
+        .slice(0, 50);
       setNearbySigns(merged);
       setRestrictionDisplayItems(getRestrictionDisplayItems(applicable));
 

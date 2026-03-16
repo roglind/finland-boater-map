@@ -267,3 +267,26 @@
     max-height: 90vh;
   }
 }
+
+.settings-data-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.settings-data-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #334155;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-data-btn:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+}

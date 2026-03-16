@@ -23,9 +23,11 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filter
       <div className="summary-grid">
         <div className="summary-cell">
           <div className="summary-title">Rajoitus</div>
-          <div className="summary-value" title={restrictionLabel}>
-            {restrictionLabel}
-          </div>
+          {restrictionDisplayItems.length === 0 && (
+            <div className="summary-value" title={restrictionLabel}>
+              {restrictionLabel}
+            </div>
+          )}
           {restrictionDisplayItems.length > 0 && (
             <div className="summary-area-signs">
               {restrictionDisplayItems.slice(0, 6).map((item, idx) => (

@@ -1,4 +1,5 @@
-import type { AppFilters } from '../types';
+import type { AppFilters, UpdateStatus } from '../types';
+import UpdateButton from './UpdateButton';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -6,9 +7,11 @@ interface SettingsPanelProps {
   availableVlmtyyppi: number[];
   onFilterChange: <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => void;
   onClose: () => void;
+  onUpdate: () => void;
+  updateStatus: UpdateStatus;
 }
 
-function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose }: SettingsPanelProps) {
+function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose, onUpdate, updateStatus }: SettingsPanelProps) {
   const toggleVlmtyyppi = (value: number) => {
     const newSet = new Set(filters.selectedVlmtyyppi);
     if (newSet.has(value)) {
@@ -114,6 +117,26 @@ function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose }:
                   <span className="label-text">Tyyppi {type}</span>
                 </label>
               ))}
+            </div>
+          </section>
+          <section className="settings-section">
+            <h3>Aineisto</h3>
+            <div className="setting-item">
+              <UpdateButton onUpdate={onUpdate} status={updateStatus} />
+            </div>
+            <div className="setting-item settings-data-buttons">
+              <button
+                className="settings-data-btn"
+                onClick={() => window.open('?viewer=areas', '_blank')}
+              >
+                View area data
+              </button>
+              <button
+                className="settings-data-btn"
+                onClick={() => window.open('?viewer=signs', '_blank')}
+              >
+                View sign data
+              </button>
             </div>
           </section>
         </div>

@@ -14,7 +14,6 @@ import { getRestrictionDisplayItems, type RestrictionDisplayItem } from './logic
 import MapView from './components/MapView';
 import BottomSheet from './components/BottomSheet';
 import SettingsPanel from './components/SettingsPanel';
-import UpdateButton from './components/UpdateButton';
 import type { 
   UpdateStatus, 
   AppFilters, 
@@ -252,33 +251,12 @@ function App() {
       />
       
       <div className="controls">
-        <UpdateButton 
-          onUpdate={handleUpdate}
-          status={updateStatus}
-        />
-        
         <button 
           className="settings-btn"
           onClick={() => setShowSettings(!showSettings)}
           aria-label="Asetukset"
         >
           ⚙️
-        </button>
-
-        <button
-          className="data-btn"
-          onClick={() => window.open('?viewer=areas', '_blank')}
-          title="View restriction area data"
-        >
-          View area data
-        </button>
-
-        <button
-          className="data-btn"
-          onClick={() => window.open('?viewer=signs', '_blank')}
-          title="View traffic sign data"
-        >
-          View sign data
         </button>
       </div>
       
@@ -295,6 +273,8 @@ function App() {
           availableVlmtyyppi={availableVlmtyyppi}
           onFilterChange={updateFilter}
           onClose={() => setShowSettings(false)}
+          onUpdate={handleUpdate}
+          updateStatus={updateStatus}
         />
       )}
       

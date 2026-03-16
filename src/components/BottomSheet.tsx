@@ -66,9 +66,9 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filter
 
         <div className="summary-cell">
           <div className="summary-title">Läheiset merkit</div>
-          {signs.length > 0 ? (
+          {signs.filter(s => s.distance <= filters.nearbyRadius).length > 0 ? (
             <div className="summary-nearby-signs">
-              {signs.map((sign) => (
+              {signs.filter(s => s.distance <= filters.nearbyRadius).map((sign) => (
                 <div key={sign.id} className="summary-area-sign-block">
                   <img
                     className="summary-area-sign-icon"

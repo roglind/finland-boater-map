@@ -10,7 +10,7 @@ proj4.defs('EPSG:3067', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 
 
 // Function to transform coordinates from ETRS-TM35FIN to WGS84
 function transformCoordinates(coords: number[]): number[] {
-  if (coords.length === 2) {
+  if (coords.length === 2 && typeof coords[0] === 'number') {
     // Single point [x, y] -> [lng, lat]
     const [x, y] = coords;
     

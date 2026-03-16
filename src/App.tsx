@@ -263,6 +263,22 @@ function App() {
         >
           ⚙️
         </button>
+
+        <button
+          className="data-btn"
+          onClick={() => window.open('?viewer=areas', '_blank')}
+          title="View restriction area data"
+        >
+          View area data
+        </button>
+
+        <button
+          className="data-btn"
+          onClick={() => window.open('?viewer=signs', '_blank')}
+          title="View traffic sign data"
+        >
+          View sign data
+        </button>
       </div>
       
       <BottomSheet 

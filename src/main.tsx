@@ -2,14 +2,22 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
+import DataViewer from './pages/DataViewer';
 import './index.css';
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
+  const params = new URLSearchParams(window.location.search);
+  const viewer = params.get('viewer');
+
   ReactDOM.createRoot(rootEl).render(
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    viewer === 'areas' || viewer === 'signs'
+      ? <DataViewer type={viewer} />
+      : (
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      )
   );
 }
 

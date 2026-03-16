@@ -1,0 +1,145 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 0.85rem;
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.dv-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.dv-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #0a4d68;
+  color: white;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.dv-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dv-count {
+  font-size: 0.8rem;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  white-space: nowrap;
+}
+
+.dv-filter {
+  flex: 1;
+  min-width: 180px;
+  max-width: 400px;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: white;
+  color: #1e293b;
+  outline: none;
+}
+
+.dv-filter:focus {
+  box-shadow: 0 0 0 2px #05bfdb;
+}
+
+.dv-error {
+  padding: 1rem;
+  color: #ef4444;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+}
+
+.dv-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.dv-table-wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.dv-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.dv-th {
+  position: sticky;
+  top: 0;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.75rem;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 2px solid #94a3b8;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dv-th:hover {
+  background: #cbd5e1;
+}
+
+.dv-th--sorted {
+  background: #bfdbfe;
+  color: #1e40af;
+}
+
+.dv-sort-arrow {
+  font-size: 0.7rem;
+}
+
+.dv-td {
+  padding: 0.35rem 0.75rem;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+
+.dv-row-even {
+  background: #ffffff;
+}
+
+.dv-row-odd {
+  background: #f8fafc;
+}
+
+.dv-row-even:hover,
+.dv-row-odd:hover {
+  background: #eff6ff;
+}
+
+.dv-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+}

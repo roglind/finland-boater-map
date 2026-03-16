@@ -30,6 +30,10 @@ export interface RestrictionDisplayItem {
   label: string;
   poikkeus?: string;
   lisatieto?: string;
+  /** Debug: raw rajoitustyypit from restriction (e.g. "01, 02") */
+  debugRajoitustyypit?: string;
+  /** Debug: suuruus value from restriction (suuruusRaw or suuruusKmh) */
+  debugSuuruus?: string;
 }
 
 /**
@@ -100,7 +104,9 @@ function buildFallbackItem(r: ApplicableRestriction): RestrictionDisplayItem {
     iconUrl: getDefaultIconUrl(),
     label,
     poikkeus: r.poikkeus?.trim() || undefined,
-    lisatieto: r.lisatieto?.trim() || undefined
+    lisatieto: r.lisatieto?.trim() || undefined,
+    debugRajoitustyypit: r.rajoitustyypit?.trim() || undefined,
+    debugSuuruus: r.suuruusKmh != null ? String(r.suuruusKmh) : r.suuruusRaw?.trim() || undefined
   };
 }
 
@@ -116,6 +122,8 @@ function signsInAreaToDisplayItems(
   const byKey = new Map<string, RestrictionDisplayItem>();
   const poikkeus = firstRestriction?.poikkeus?.trim() || undefined;
   const lisatieto = firstRestriction?.lisatieto?.trim() || undefined;
+  const debugRajoitustyypit = firstRestriction?.rajoitustyypit?.trim() || undefined;
+  const debugSuuruus = firstRestriction?.suuruusKmh != null ? String(firstRestriction.suuruusKmh) : firstRestriction?.suuruusRaw?.trim() || undefined;
   for (const sign of signs) {
     const key = sign.iconKey;
     if (byKey.has(key)) continue;
@@ -125,7 +133,9 @@ function signsInAreaToDisplayItems(
       iconUrl: getIconUrl(sign.iconKey),
       label: formatSignName(sign),
       poikkeus,
-      lisatieto
+      lisatieto,
+      debugRajoitustyypit,
+      debugSuuruus
     });
   }
   return Array.from(byKey.values()).sort((a, b) => a.vlmlajityyppi - b.vlmlajityyppi);
@@ -177,7 +187,9 @@ export function getRestrictionDisplayItems(
         iconUrl: getIconUrl(iconKey),
         label: buildLabel(vlmlajityyppi, suuruusKmh, r.suuruusRaw, r.rajoitustyyppi),
         poikkeus: r.poikkeus?.trim() || undefined,
-        lisatieto: r.lisatieto?.trim() || undefined
+        lisatieto: r.lisatieto?.trim() || undefined,
+        debugRajoitustyypit: r.rajoitustyypit?.trim() || undefined,
+        debugSuuruus: r.suuruusKmh != null ? String(r.suuruusKmh) : r.suuruusRaw?.trim() || undefined
       };
 
       if (existing) {

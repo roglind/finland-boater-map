@@ -57,6 +57,11 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [] }: Bott
                     {item.lisatieto && (
                       <span className="summary-area-extra"> {item.lisatieto}</span>
                     )}
+                    {(item.debugRajoitustyypit != null || item.debugSuuruus != null) && (
+                      <span className="summary-area-debug">
+                        rajoitustyypit: {item.debugRajoitustyypit ?? '—'} | suuruus: {item.debugSuuruus ?? '—'} | iconKey: {item.iconKey}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

@@ -7,8 +7,9 @@
   border-top: 1px solid var(--border-color);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
   z-index: 900;
-  height: 10vh;
-  max-height: 10vh;
+  height: auto;
+  max-height: 30vh;
+  overflow-y: auto;
   display: flex;
   align-items: stretch;
 }
@@ -79,8 +80,7 @@
   flex-direction: column;
   gap: 0.25rem;
   margin-top: 0.2rem;
-  max-height: 4rem;
-  overflow-y: auto;
+  max-height: none;
 }
 
 .summary-area-sign-block {
@@ -124,8 +124,8 @@
 
 @media (max-width: 768px) {
   .bottom-sheet {
-    height: 10vh;
-    max-height: 10vh;
+    height: auto;
+    max-height: 30vh;
   }
 
   .summary-grid {

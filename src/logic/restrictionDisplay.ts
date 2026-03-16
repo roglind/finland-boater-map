@@ -1,5 +1,5 @@
-import type { ApplicableRestriction, TrafficSign } from '../types';
-import { getIconUrl, getDefaultIconUrl, formatSignName } from './nearbySigns';
+import type { ApplicableRestriction } from '../types';
+import { getIconUrl, getDefaultIconUrl } from './nearbySigns';
 
 /** vlmlajityyppi values that use suuruus (speed/value) in the icon key. Includes 3, 12 per ICONS.md. */
 const SUURUUS_SUFFIX_TYPES = new Set([3, 11, 12, 15, 16, 17, 19]);
@@ -111,54 +111,18 @@ function buildFallbackItem(r: ApplicableRestriction): RestrictionDisplayItem {
 }
 
 /**
- * Convert real traffic signs (inside restriction areas) to display items.
- * Uses each sign's actual iconKey from the API, so the correct icons load.
- */
-function signsInAreaToDisplayItems(
-  signs: TrafficSign[],
-  firstRestriction?: ApplicableRestriction
-): RestrictionDisplayItem[] {
-  if (signs.length === 0) return [];
-  const byKey = new Map<string, RestrictionDisplayItem>();
-  const poikkeus = firstRestriction?.poikkeus?.trim() || undefined;
-  const lisatieto = firstRestriction?.lisatieto?.trim() || undefined;
-  const debugRajoitustyypit = firstRestriction?.rajoitustyypit?.trim() || undefined;
-  const debugSuuruus = firstRestriction?.suuruusKmh != null ? String(firstRestriction.suuruusKmh) : firstRestriction?.suuruusRaw?.trim() || undefined;
-  for (const sign of signs) {
-    const key = sign.iconKey;
-    if (byKey.has(key)) continue;
-    byKey.set(key, {
-      vlmlajityyppi: sign.vlmlajityyppi,
-      iconKey: sign.iconKey,
-      iconUrl: getIconUrl(sign.iconKey),
-      label: formatSignName(sign),
-      poikkeus,
-      lisatieto,
-      debugRajoitustyypit,
-      debugSuuruus
-    });
-  }
-  return Array.from(byKey.values()).sort((a, b) => a.vlmlajityyppi - b.vlmlajityyppi);
-}
-
-/**
  * Build display items from applicable restrictions.
- * - When signs are inside the restriction areas, uses those real signs (with their actual iconKey).
- * - Otherwise uses rajoitustyypit to derive sign types.
+ * Always uses rajoitustyypit -> RAJOITUSTYYPIT_TO_VLMLAJITYYPPI translation table
+ * to determine which sign icons to display.
  * - For speed signs, suuruus holds the limit; when multiple areas overlap, show the higher speed limit.
  * - Deduplicates: same sign type + same value shown once.
  * - poikkeus and lisatieto are included when present.
  * - Fallback: when rajoitustyypit is empty, creates items from rajoitustyyppi/suuruus/lisatieto/poikkeus.
  */
 export function getRestrictionDisplayItems(
-  restrictions: ApplicableRestriction[],
-  signsInArea?: TrafficSign[]
+  restrictions: ApplicableRestriction[]
 ): RestrictionDisplayItem[] {
   if (restrictions.length === 0) return [];
-
-  if (signsInArea && signsInArea.length > 0) {
-    return signsInAreaToDisplayItems(signsInArea, restrictions[0]);
-  }
 
   const byKey = new Map<string, RestrictionDisplayItem>();
 

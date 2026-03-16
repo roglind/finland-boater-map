@@ -4,6 +4,25 @@ import { getIconUrl, getDefaultIconUrl } from './nearbySigns';
 /** vlmlajityyppi values that use suuruus (speed/value) in the icon key. Includes 3, 12 per ICONS.md. */
 const SUURUUS_SUFFIX_TYPES = new Set([3, 11, 12, 15, 16, 17, 19]);
 
+/**
+ * Translation map: rajoitustyypit (from restriction areas) -> vlmtyyppi/vlmlajityyppi (for traffic sign display).
+ * Used to display the correct traffic sign icons for each restriction area.
+ * Exported for use when matching signs to restriction areas.
+ */
+export const RAJOITUSTYYPIT_TO_VLMLAJITYYPPI: Record<number, number> = {
+  1: 11,
+  2: 6,
+  3: 8,
+  4: 10,
+  5: 9,
+  6: 1,
+  7: 2,
+  8: 3,
+  9: 4,
+  10: 5,
+  11: 0
+};
+
 export interface RestrictionDisplayItem {
   vlmlajityyppi: number;
   iconKey: string;
@@ -13,16 +32,25 @@ export interface RestrictionDisplayItem {
   lisatieto?: string;
 }
 
-/** Parse rajoitustyypit string to array of vlmlajityyppi numbers. E.g. "01, 02" -> [1, 2], "11" -> [11] */
-function parseRajoitustyypit(raw: string): number[] {
+/**
+ * Parse rajoitustyypit string and translate to vlmlajityyppi using RAJOITUSTYYPIT_TO_VLMLAJITYYPPI.
+ * E.g. "01, 02" -> [11, 6] (01->11, 02->6)
+ */
+function parseRajoitustyypitToVlmlajityyppi(raw: string): number[] {
   if (!raw || typeof raw !== 'string') return [];
   const parts = raw.split(/[,\s;]+/).map((p) => p.trim()).filter(Boolean);
-  const numbers: number[] = [];
+  const result: number[] = [];
+  const seen = new Set<number>();
   for (const p of parts) {
     const n = parseInt(p, 10);
-    if (Number.isFinite(n) && n > 0) numbers.push(n);
+    if (!Number.isFinite(n) || n < 1 || n > 11) continue;
+    const vlmlajityyppi = RAJOITUSTYYPIT_TO_VLMLAJITYYPPI[n];
+    if (vlmlajityyppi !== undefined && vlmlajityyppi !== 0 && !seen.has(vlmlajityyppi)) {
+      seen.add(vlmlajityyppi);
+      result.push(vlmlajityyppi);
+    }
   }
-  return numbers;
+  return result;
 }
 
 function deriveIconKey(vlmlajityyppi: number, suuruusKmh?: number): string {
@@ -92,9 +120,9 @@ export function getRestrictionDisplayItems(
   const byKey = new Map<string, RestrictionDisplayItem>();
 
   for (const r of restrictions) {
-    let vlmlajityyppit = parseRajoitustyypit(r.rajoitustyypit);
+    let vlmlajityyppit = parseRajoitustyypitToVlmlajityyppi(r.rajoitustyypit);
     if (vlmlajityyppit.length === 0) {
-      vlmlajityyppit = parseRajoitustyypit(r.rajoitustyyppi || '');
+      vlmlajityyppit = parseRajoitustyypitToVlmlajityyppi(r.rajoitustyyppi || '');
     }
     if (vlmlajityyppit.length === 0) {
       const fallback = buildFallbackItem(r);

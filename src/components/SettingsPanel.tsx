@@ -4,32 +4,13 @@ import './SettingsPanel.css';
 
 interface SettingsPanelProps {
   filters: AppFilters;
-  availableVlmtyyppi: number[];
   onFilterChange: <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => void;
   onClose: () => void;
   onUpdate: () => void;
   updateStatus: UpdateStatus;
 }
 
-function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose, onUpdate, updateStatus }: SettingsPanelProps) {
-  const toggleVlmtyyppi = (value: number) => {
-    const newSet = new Set(filters.selectedVlmtyyppi);
-    if (newSet.has(value)) {
-      newSet.delete(value);
-    } else {
-      newSet.add(value);
-    }
-    onFilterChange('selectedVlmtyyppi', newSet);
-  };
-  
-  const selectAllVlmtyyppi = () => {
-    onFilterChange('selectedVlmtyyppi', new Set(availableVlmtyyppi));
-  };
-  
-  const clearAllVlmtyyppi = () => {
-    onFilterChange('selectedVlmtyyppi', new Set<number>());
-  };
-  
+function SettingsPanel({ filters, onFilterChange, onClose, onUpdate, updateStatus }: SettingsPanelProps) {
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -93,32 +74,6 @@ function SettingsPanel({ filters, availableVlmtyyppi, onFilterChange, onClose, o
             </div>
           </section>
           
-          <section className="settings-section">
-            <div className="section-header">
-              <h3>Merkkityypit</h3>
-              <div className="bulk-actions">
-                <button onClick={selectAllVlmtyyppi} className="text-btn">Valitse kaikki</button>
-                <button onClick={clearAllVlmtyyppi} className="text-btn">Tyhjennä</button>
-              </div>
-            </div>
-            <p className="setting-description">
-              {filters.selectedVlmtyyppi.size === 0 ? 'Näytetään kaikki merkit' : `Valittu ${filters.selectedVlmtyyppi.size} tyyppiä`}
-            </p>
-            
-            <div className="vlmtyyppi-grid">
-              {availableVlmtyyppi.map(type => (
-                <label key={type} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={filters.selectedVlmtyyppi.has(type)}
-                    onChange={() => toggleVlmtyyppi(type)}
-                  />
-                  <span className="checkbox-custom" />
-                  <span className="label-text">Tyyppi {type}</span>
-                </label>
-              ))}
-            </div>
-          </section>
           <section className="settings-section">
             <h3>Aineisto</h3>
             <div className="setting-item">

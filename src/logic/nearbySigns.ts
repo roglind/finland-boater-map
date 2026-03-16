@@ -37,7 +37,7 @@ export function getSignsInAreas(
   return out;
 }
 
-/** Convert TrafficSign[] to NearbySign[] (distance, bearing, iconUrl, vlmtyyppi filter); no radius filter. */
+/** Convert TrafficSign[] to NearbySign[] (distance, bearing, iconUrl); no radius filter. */
 export function signsToNearbySigns(
   signs: TrafficSign[],
   position: BoatPosition,
@@ -46,9 +46,6 @@ export function signsToNearbySigns(
   const boatPoint = point([position.lng, position.lat]);
   const nearby: NearbySign[] = [];
   for (const sign of signs) {
-    if (filters.selectedVlmtyyppi.size > 0 && !filters.selectedVlmtyyppi.has(sign.vlmtyyppi)) {
-      continue;
-    }
     const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
     if (!isValidLngLat([lng, lat])) continue;
     const signPoint = point([lng, lat]);
@@ -75,13 +72,6 @@ export function getNearbySignsWithDistance(
   const nearby: NearbySign[] = [];
   
   for (const sign of signs) {
-    // Apply VLMTYYPPI filter
-    if (filters.selectedVlmtyyppi.size > 0) {
-      if (!filters.selectedVlmtyyppi.has(sign.vlmtyyppi)) {
-        continue;
-      }
-    }
-    
     const [lng, lat] = ensureLngLat(sign.geometry.coordinates);
     if (!isValidLngLat([lng, lat])) continue;
     const signPoint = point([lng, lat]);
@@ -148,12 +138,6 @@ export function bearingToCompass(degrees: number): string {
   return COMPASS_LABELS[index];
 }
 
-// Get unique VLMTYYPPI values for filter UI
-export function getUniqueVlmtyyppi(signs: TrafficSign[]): number[] {
-  const unique = new Set<number>();
-  signs.forEach(sign => unique.add(sign.vlmtyyppi));
-  return Array.from(unique).sort((a, b) => a - b);
-}
 
 export function mergeNearbySigns(primary: NearbySign[], secondary: NearbySign[]): NearbySign[] {
   const byId = new Map<number, NearbySign>();

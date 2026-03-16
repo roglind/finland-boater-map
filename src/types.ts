@@ -55,7 +55,6 @@ export interface UpdateStatus {
 export interface AppFilters {
   lisatietoja: boolean;
   vesiskootteri: boolean;
-  selectedVlmtyyppi: Set<number>;
   nearbyRadius: number; // meters, default 250
 }
 

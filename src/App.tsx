@@ -5,7 +5,6 @@ import { spatialIndex } from './logic/spatialIndex';
 import { getApplicableRestrictions } from './logic/applicability';
 import {
   getNearbySignsWithDistance,
-  getUniqueVlmtyyppi,
   getSignsInAreas,
   mergeNearbySigns,
   signsToNearbySigns
@@ -40,7 +39,6 @@ function App() {
   const [filters, setFilters] = useState<AppFilters>({
     lisatietoja: true,
     vesiskootteri: true,
-    selectedVlmtyyppi: new Set<number>(),
     nearbyRadius: 250
   });
   
@@ -50,7 +48,6 @@ function App() {
   const [restrictionDisplayItems, setRestrictionDisplayItems] = useState<RestrictionDisplayItem[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [availableVlmtyyppi, setAvailableVlmtyyppi] = useState<number[]>([]);
   const [allAreas, setAllAreas] = useState<RestrictionArea[]>([]);
   const [mode, setMode] = useState<EvalMode>('gps');
   const [viewport, setViewport] = useState<{ center: BoatPosition; bounds: ViewportBounds | null } | null>(null);
@@ -78,7 +75,6 @@ function App() {
       spatialIndex.buildAreaIndex(areas);
       spatialIndex.buildSignIndex(signs);
       setAllAreas(areas);
-      setAvailableVlmtyyppi(getUniqueVlmtyyppi(signs));
       setDataLoaded(areas.length > 0 && signs.length > 0);
       setDataVersion(v => v + 1);
       lastEvaluatedAtRef.current = 0;
@@ -270,7 +266,6 @@ function App() {
       {showSettings && (
         <SettingsPanel
           filters={filters}
-          availableVlmtyyppi={availableVlmtyyppi}
           onFilterChange={updateFilter}
           onClose={() => setShowSettings(false)}
           onUpdate={handleUpdate}

@@ -256,12 +256,17 @@ function App() {
         </button>
       </div>
       
+      <div className="speed-overlay">
+        {boatPosition?.speed != null
+          ? `${(boatPosition.speed * 3.6).toFixed(1)} km/h`
+          : '– km/h'}
+      </div>
+
       <BottomSheet 
         restrictions={applicableRestrictions}
         signs={nearbySigns}
         restrictionDisplayItems={restrictionDisplayItems}
         filters={filters}
-        boatPosition={boatPosition}
       />
       
       {showSettings && (

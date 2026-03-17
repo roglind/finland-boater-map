@@ -127,6 +127,23 @@ body {
   }
 }
 
+.speed-overlay {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: var(--dark-text);
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.45rem 1rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .controls {
     top: 0.75rem;

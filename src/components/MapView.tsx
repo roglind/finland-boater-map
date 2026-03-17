@@ -262,6 +262,9 @@ function MapView({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       <div ref={mapContainerRef} className="map-container" />
+      {mode === 'viewport' && (
+        <div className="map-crosshair" aria-hidden="true" />
+      )}
       {mode === 'viewport' && boatPosition && (
         <button onClick={onRequestGpsMode} style={{
           position: 'absolute', right: '10px', top: '50%',

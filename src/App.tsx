@@ -36,10 +36,12 @@ function App() {
     message: ''
   });
 
-  const [filters, setFilters] = useState<AppFilters>({
-    lisatietoja: true,
-    vesiskootteri: true,
-    nearbyRadius: 250
+  const [filters, setFilters] = useState<AppFilters>(() => {
+    try {
+      const saved = localStorage.getItem('appFilters');
+      if (saved) return { lisatietoja: true, vesiskootteri: true, nearbyRadius: 250, ...JSON.parse(saved) };
+    } catch { /* ignore parse errors */ }
+    return { lisatietoja: true, vesiskootteri: true, nearbyRadius: 250 };
   });
   
   const [boatPosition, setBoatPosition] = useState<BoatPosition | null>(null);
@@ -229,7 +231,11 @@ function App() {
   }, [dataLoaded, dataVersion, filters, mode, boatPosition, viewport]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => {
+      const next = { ...prev, [key]: value };
+      try { localStorage.setItem('appFilters', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
   };
   
   return (

@@ -194,16 +194,10 @@ function MapView({
     map.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: currentZoom, duration: 500 });
   }, [boatPosition, mode]);
 
-  // Boat: overlay at center in GPS mode (map follows), marker at position in viewport mode
+  // Boat marker at GPS position - always shown so position is visible when panning
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
-
-    if (mode === 'gps') {
-      boatMarkerRef.current?.remove();
-      boatMarkerRef.current = null;
-      return;
-    }
 
     if (!boatPosition) {
       boatMarkerRef.current?.remove();
@@ -221,7 +215,7 @@ function MapView({
     } else {
       boatMarkerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
     }
-  }, [boatPosition, mapReady, mode]);
+  }, [boatPosition, mapReady]);
 
   // Update signs
   useEffect(() => {
@@ -268,19 +262,6 @@ function MapView({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       <div ref={mapContainerRef} className="map-container" />
-      {mode === 'gps' && boatPosition && (
-        <div
-          className="boat-marker boat-marker--overlay"
-          style={{
-            position: 'absolute', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)', fontSize: '32px',
-            pointerEvents: 'none', zIndex: 1000,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-          }}
-        >
-          🚤
-        </div>
-      )}
       {mode === 'viewport' && boatPosition && (
         <button onClick={onRequestGpsMode} style={{
           position: 'absolute', right: '10px', top: '50%',

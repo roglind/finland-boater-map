@@ -20,9 +20,8 @@
 .bottom-sheet--expanded {
   top: auto;
   bottom: 0;
-  height: auto;
-  min-height: 40vh;
-  max-height: 75vh;
+  height: 80vh;
+  max-height: 80vh;
   z-index: 950;
   padding-top: max(3rem, env(safe-area-inset-top));
   cursor: default;

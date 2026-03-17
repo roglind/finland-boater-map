@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ApplicableRestriction, NearbySign, AppFilters } from '../types';
 import { formatSignName, formatDistance, bearingToCompass, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import type { RestrictionDisplayItem } from '../logic/restrictionDisplay';
@@ -11,6 +12,7 @@ interface BottomSheetProps {
 }
 
 function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filters }: BottomSheetProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const primaryItem = restrictionDisplayItems[0];
   const restrictionLabel = primaryItem
     ? primaryItem.label
@@ -19,7 +21,32 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filter
       : 'Ei rajoituksia';
 
   return (
-    <div className="bottom-sheet">
+    <div
+      className={`bottom-sheet ${isExpanded ? 'bottom-sheet--expanded' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      onClick={() => { if (!isExpanded) setIsExpanded(true); }}
+      onKeyDown={(e) => {
+        if (!isExpanded && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          setIsExpanded(true);
+        }
+      }}
+    >
+      {isExpanded && (
+        <button
+          type="button"
+          className="bottom-sheet__close"
+          aria-label="Sulje"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(false);
+          }}
+        >
+          ×
+        </button>
+      )}
       <div className="summary-grid">
         <div className="summary-cell">
           <div className="summary-title">Rajoitus</div>

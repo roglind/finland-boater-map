@@ -183,10 +183,12 @@ function MapView({
     map.setFilter('all-restrictions-line', filterExpr);
   }, [filters, mapReady]);
 
-  // GPS follow only in GPS mode
+  // GPS follow only in GPS mode - preserve current zoom when recentering
   useEffect(() => {
     if (!mapRef.current || !boatPosition || mode !== 'gps') return;
-    mapRef.current.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: 13, duration: 500 });
+    const map = mapRef.current;
+    const currentZoom = map.getZoom();
+    map.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: currentZoom, duration: 500 });
   }, [boatPosition, mode]);
 
   // Update signs

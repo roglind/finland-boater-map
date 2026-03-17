@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ApplicableRestriction, NearbySign, AppFilters } from '../types';
+import type { ApplicableRestriction, NearbySign, AppFilters, BoatPosition } from '../types';
 import { formatSignName, formatDistance, bearingToCompass, getDefaultIconUrl, getIconUrl } from '../logic/nearbySigns';
 import type { RestrictionDisplayItem } from '../logic/restrictionDisplay';
 import './BottomSheet.css';
@@ -9,9 +9,10 @@ interface BottomSheetProps {
   signs: NearbySign[];
   restrictionDisplayItems?: RestrictionDisplayItem[];
   filters: AppFilters;
+  boatPosition?: BoatPosition | null;
 }
 
-function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filters }: BottomSheetProps) {
+function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filters, boatPosition }: BottomSheetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const primaryItem = restrictionDisplayItems[0];
   const restrictionLabel = primaryItem
@@ -91,6 +92,15 @@ function BottomSheet({ restrictions, signs, restrictionDisplayItems = [], filter
               ))}
             </div>
           )}
+        </div>
+
+        <div className="summary-cell">
+          <div className="summary-title">Nopeus</div>
+          <div className="summary-value summary-speed">
+            {boatPosition?.speed != null
+              ? `${(boatPosition.speed * 3.6).toFixed(1)} km/h`
+              : '– km/h'}
+          </div>
         </div>
 
         <div className="summary-cell">

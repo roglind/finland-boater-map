@@ -261,6 +261,7 @@ function App() {
         signs={nearbySigns}
         restrictionDisplayItems={restrictionDisplayItems}
         filters={filters}
+        boatPosition={boatPosition}
       />
       
       {showSettings && (

@@ -223,7 +223,7 @@ function MapView({
       el.className = 'boat-marker';
       el.innerHTML = `<svg viewBox="0 0 24 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
         <path d="M 12 0 L 23 30 L 12 20 L 1 30 Z"
-          fill="#1e3a5f" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          fill="#e53e3e" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>`;
       el.style.transformOrigin = 'top center';
       el.style.transform = `rotate(${lastHeadingRef.current}deg)`;

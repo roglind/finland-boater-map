@@ -30,22 +30,38 @@ export class DataUpdater {
       const storedParserVersion = await getParserVersion();
       const parserVersionChanged = storedParserVersion !== PARSER_VERSION;
 
-      // Fetch both files in parallel
+      // Fetch files sequentially so progress is linear and easy to follow
+      // Rajoitus: 5 → 50%
       this.updateStatus({
-        progress: 10,
+        isUpdating: true,
+        progress: 5,
         message: parserVersionChanged
-          ? 'Parseri paivittynyt, ladataan aineistot uudelleen...'
+          ? 'Parseri päivittynyt, ladataan aineistot uudelleen...'
           : 'Ladataan rajoitusalueet...'
       });
-      const rajoitusPromise = this.fetchFile(RAJOITUS_URL, 'rajoitus', parserVersionChanged);
-      
-      this.updateStatus({ progress: 30, message: 'Ladataan liikennemerkit...' });
-      const vesiliikennePromise = this.fetchFile(VESILIIKENNE_URL, 'vesiliikenne', parserVersionChanged);
-      
-      const [rajoitusBuffer, vesiliikenneBuffer] = await Promise.all([
-        rajoitusPromise,
-        vesiliikennePromise
-      ]);
+      const rajoitusBuffer = await this.fetchFileStreaming(
+        RAJOITUS_URL, 'rajoitus', parserVersionChanged,
+        (loaded, total) => {
+          this.updateStatus({
+            isUpdating: true,
+            progress: 5 + Math.round((loaded / total) * 45),
+            message: 'Ladataan rajoitusalueet...'
+          });
+        }
+      );
+
+      // Vesiliikenne: 50 → 75%
+      this.updateStatus({ isUpdating: true, progress: 50, message: 'Ladataan liikennemerkit...' });
+      const vesiliikenneBuffer = await this.fetchFileStreaming(
+        VESILIIKENNE_URL, 'vesiliikenne', parserVersionChanged,
+        (loaded, total) => {
+          this.updateStatus({
+            isUpdating: true,
+            progress: 50 + Math.round((loaded / total) * 25),
+            message: 'Ladataan liikennemerkit...'
+          });
+        }
+      );
 
       if (parserVersionChanged && (!rajoitusBuffer || !vesiliikenneBuffer)) {
         throw new Error('Parseri paivittyi, mutta aineistoa ei voitu hakea uudelleen kokonaan.');
@@ -68,17 +84,17 @@ export class DataUpdater {
       let trafficSigns: TrafficSign[] | null = null;
 
       if (rajoitusBuffer) {
-        this.updateStatus({ progress: 50, message: 'Käsitellään rajoitusalueet...' });
+        this.updateStatus({ isUpdating: true, progress: 75, message: 'Käsitellään rajoitusalueet...' });
         restrictionAreas = await this.parseInWorker(rajoitusBuffer, 'rajoitus') as RestrictionArea[];
       }
 
       if (vesiliikenneBuffer) {
-        this.updateStatus({ progress: 70, message: 'Käsitellään liikennemerkit...' });
+        this.updateStatus({ isUpdating: true, progress: 82, message: 'Käsitellään liikennemerkit...' });
         trafficSigns = await this.parseInWorker(vesiliikenneBuffer, 'vesiliikenne') as TrafficSign[];
         this.logIconKeySuffixSamples(trafficSigns);
       }
 
-      this.updateStatus({ progress: 85, message: 'Tallennetaan tietokantaan...' });
+      this.updateStatus({ isUpdating: true, progress: 90, message: 'Tallennetaan tietokantaan...' });
       if (restrictionAreas) {
         await this.storeRestrictionAreas(restrictionAreas);
       }
@@ -125,18 +141,19 @@ export class DataUpdater {
     }
   }
   
-  private async fetchFile(
+  private async fetchFileStreaming(
     url: string,
     type: 'rajoitus' | 'vesiliikenne',
-    forceRefresh: boolean = false
+    forceRefresh: boolean,
+    onProgress: (loaded: number, total: number) => void
   ): Promise<ArrayBuffer | null> {
     const etag = await getMeta(`${type}_etag`);
-    
+
     const headers: HeadersInit = {};
     if (etag && !forceRefresh) {
       headers['If-None-Match'] = etag;
     }
-    
+
     const requestUrl = forceRefresh
       ? `${url}${url.includes('?') ? '&' : '?'}parser_version=${encodeURIComponent(PARSER_VERSION)}`
       : url;
@@ -145,20 +162,50 @@ export class DataUpdater {
       headers,
       cache: forceRefresh ? 'no-store' : 'default'
     });
-    
-    if (response.status === 304) return null; 
-    
+
+    if (response.status === 304) return null;
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     // Store new ETag
     const newEtag = response.headers.get('ETag');
     if (newEtag) {
       await setMeta(`${type}_etag`, newEtag);
     }
-    
-    return await response.arrayBuffer();
+
+    // Fall back to known approximate sizes if Content-Length is absent (e.g. gzip transfer)
+    const FALLBACK_SIZES: Record<string, number> = { rajoitus: 10_000_000, vesiliikenne: 4_000_000 };
+    const contentLength = response.headers.get('Content-Length');
+    const total = contentLength ? parseInt(contentLength, 10) : FALLBACK_SIZES[type];
+
+    if (!response.body) {
+      // Streams API unavailable — fall back to arrayBuffer without progress
+      const buffer = await response.arrayBuffer();
+      onProgress(buffer.byteLength, buffer.byteLength);
+      return buffer;
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      onProgress(loaded, total);
+    }
+
+    const result = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return result.buffer;
   }
   
   private async parseInWorker(

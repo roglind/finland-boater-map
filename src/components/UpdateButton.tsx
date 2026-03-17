@@ -48,14 +48,15 @@ function UpdateButton({ onUpdate, status }: UpdateButtonProps) {
       {status.message && (
         <div className={`update-message ${status.isUpdating ? 'active' : ''}`}>
           {status.message}
-          {status.isUpdating && status.progress > 0 && (
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${status.progress}%` }}
-              />
-            </div>
-          )}
+        </div>
+      )}
+
+      {status.isUpdating && (
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{ width: `${status.progress}%` }}
+          />
         </div>
       )}
       

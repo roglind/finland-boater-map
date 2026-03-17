@@ -18,10 +18,11 @@
 }
 
 .bottom-sheet--expanded {
-  top: 0;
+  top: auto;
   bottom: 0;
-  height: 100%;
-  max-height: none;
+  height: auto;
+  min-height: 40vh;
+  max-height: 75vh;
   z-index: 950;
   padding-top: max(3rem, env(safe-area-inset-top));
   cursor: default;

@@ -8,20 +8,20 @@
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
   z-index: 900;
   height: auto;
-  max-height: 30vh;
+  max-height: 20vh;
   overflow-y: auto;
   display: flex;
   align-items: stretch;
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   cursor: pointer;
-  transition: max-height 0.25s ease, height 0.25s ease;
+  transition: max-height 0.3s ease, height 0.3s ease;
 }
 
 .bottom-sheet--expanded {
   top: auto;
   bottom: 0;
-  height: 80vh;
-  max-height: 80vh;
+  height: 75vh;
+  max-height: 75vh;
   z-index: 950;
   padding-top: max(3rem, env(safe-area-inset-top));
   cursor: default;
@@ -198,9 +198,14 @@
 }
 
 @media (max-width: 768px) {
-  .bottom-sheet {
+  .bottom-sheet:not(.bottom-sheet--expanded) {
     height: auto;
-    max-height: 30vh;
+    max-height: 20vh;
+  }
+
+  .bottom-sheet--expanded {
+    height: 75vh;
+    max-height: 75vh;
   }
 
   .summary-grid {

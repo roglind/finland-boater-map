@@ -58,6 +58,7 @@ function MapView({
   const boatMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastHeadingRef = useRef<number>(0);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const restrictionAreasRef = useRef<RestrictionArea[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const viewportCallbackRef = useRef<MapViewProps['onMapViewportChange']>(onMapViewportChange);
   const dragStartCallbackRef = useRef<MapViewProps['onMapDragStart']>(onMapDragStart);
@@ -134,6 +135,12 @@ function MapView({
         });
       }
       setMapReady(true);
+
+      // Re-apply restriction data in case this is a WebGL context restoration
+      const src = map.getSource('all-restrictions') as maplibregl.GeoJSONSource | undefined;
+      if (src && restrictionAreasRef.current.length > 0) {
+        src.setData(buildRestrictionsGeoJSON(restrictionAreasRef.current));
+      }
       setTimeout(reportViewport, 0);
     };
 
@@ -165,6 +172,7 @@ function MapView({
 
   // Update restriction areas from App state (single source of truth)
   useEffect(() => {
+    restrictionAreasRef.current = restrictionAreas;
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
     if (!map.isStyleLoaded()) return;

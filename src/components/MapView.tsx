@@ -55,6 +55,7 @@ function MapView({
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const boatMarkerRef = useRef<maplibregl.Marker | null>(null);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const viewportCallbackRef = useRef<MapViewProps['onMapViewportChange']>(onMapViewportChange);
@@ -151,6 +152,8 @@ function MapView({
       map.off('load', onLoad);
       map.off('moveend', onMoveEnd);
       map.off('dragstart', onDragStart);
+      boatMarkerRef.current?.remove();
+      boatMarkerRef.current = null;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -190,6 +193,29 @@ function MapView({
     const currentZoom = map.getZoom();
     map.flyTo({ center: [boatPosition.lng, boatPosition.lat], zoom: currentZoom, duration: 500 });
   }, [boatPosition, mode]);
+
+  // Boat marker at GPS position (fixes zoom-dependent offset)
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+
+    if (!boatPosition) {
+      boatMarkerRef.current?.remove();
+      boatMarkerRef.current = null;
+      return;
+    }
+
+    if (!boatMarkerRef.current) {
+      const el = document.createElement('div');
+      el.className = 'boat-marker';
+      el.textContent = '🚤';
+      boatMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([boatPosition.lng, boatPosition.lat])
+        .addTo(map);
+    } else {
+      boatMarkerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
+    }
+  }, [boatPosition, mapReady]);
 
   // Update signs
   useEffect(() => {
@@ -236,12 +262,6 @@ function MapView({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
       <div ref={mapContainerRef} className="map-container" />
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)', fontSize: '32px',
-        pointerEvents: 'none', zIndex: 1000,
-        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-      }}>🚤</div>
       {mode === 'viewport' && boatPosition && (
         <button onClick={onRequestGpsMode} style={{
           position: 'absolute', right: '10px', top: '50%',

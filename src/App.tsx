@@ -12,6 +12,7 @@ import { getRestrictionDisplayItems, type RestrictionDisplayItem } from './logic
 import MapView from './components/MapView';
 import BottomSheet from './components/BottomSheet';
 import SettingsPanel from './components/SettingsPanel';
+import Disclaimer from './components/Disclaimer';
 import type { 
   UpdateStatus, 
   AppFilters, 
@@ -47,6 +48,7 @@ function App() {
   const [applicableRestrictions, setApplicableRestrictions] = useState<ApplicableRestriction[]>([]);
   const [nearbySigns, setNearbySigns] = useState<NearbySign[]>([]);
   const [restrictionDisplayItems, setRestrictionDisplayItems] = useState<RestrictionDisplayItem[]>([]);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [allAreas, setAllAreas] = useState<RestrictionArea[]>([]);
@@ -243,6 +245,10 @@ function App() {
   
   return (
     <div className="app">
+      {!disclaimerAccepted && (
+        <Disclaimer onAccept={() => setDisclaimerAccepted(true)} />
+      )}
+
       <MapView
         boatPosition={boatPosition}
         restrictionAreas={allAreas}

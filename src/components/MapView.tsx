@@ -105,10 +105,6 @@ function MapView({
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(new maplibregl.AttributionControl({
-      compact: false,
-      customAttribution: '© OpenStreetMap contributors, © OpenSeaMap contributors, Väylävirasto (CC BY 4.0)'
-    }), 'bottom-right');
     mapRef.current = map;
 
     const reportViewport = () => {

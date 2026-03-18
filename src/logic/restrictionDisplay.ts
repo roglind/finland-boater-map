@@ -133,8 +133,10 @@ export function getRestrictionDisplayItems(
     }
 
     for (const vlmlajityyppi of vlmlajityyppit) {
-      const suuruusKmh = r.suuruusKmh;
-      const suuruusRaw = r.suuruusRaw?.trim();
+      // Only rajoitustyyppi 01 → vlmlajityyppi 11 (speed limit) uses the suuruus field;
+      // all other types must ignore it so they don't inherit speed-related icons/labels.
+      const suuruusKmh = vlmlajityyppi === 11 ? r.suuruusKmh : undefined;
+      const suuruusRaw = vlmlajityyppi === 11 ? r.suuruusRaw?.trim() : undefined;
       const key = itemKey(vlmlajityyppi, suuruusKmh, suuruusRaw || undefined);
 
       const existing = byKey.get(key);

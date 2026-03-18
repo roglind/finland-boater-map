@@ -54,7 +54,7 @@ function parseRajoitustyypitToVlmlajityyppi(raw: string): number[] {
 }
 
 function deriveIconKey(vlmlajityyppi: number, suuruusKmh?: number): string {
-  if (SUURUUS_SUFFIX_TYPES.has(vlmlajityyppi) && suuruusKmh != null) {
+  if (SUURUUS_SUFFIX_TYPES.has(vlmlajityyppi) && suuruusKmh != null && suuruusKmh > 0) {
     return `merkki${vlmlajityyppi}_${suuruusKmh}`;
   }
   return `merkki${vlmlajityyppi}`;
@@ -66,7 +66,7 @@ function buildLabel(
   suuruusRaw?: string,
   rajoitustyyppi?: string
 ): string {
-  if (suuruusKmh != null) {
+  if (suuruusKmh != null && suuruusKmh > 0) {
     return `Nopeusrajoitus ${suuruusKmh} km/h`;
   }
   if (suuruusRaw && suuruusRaw.trim().length > 0) {

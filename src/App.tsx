@@ -5,7 +5,6 @@ import { spatialIndex } from './logic/spatialIndex';
 import { getApplicableRestrictions } from './logic/applicability';
 import {
   getNearbySignsWithDistance,
-  getSignsInAreas,
   mergeNearbySigns,
   signsToNearbySigns
 } from './logic/nearbySigns';
@@ -53,6 +52,7 @@ function App() {
   const [allAreas, setAllAreas] = useState<RestrictionArea[]>([]);
   const [mode, setMode] = useState<EvalMode>('gps');
   const [viewport, setViewport] = useState<{ center: BoatPosition; bounds: ViewportBounds | null } | null>(null);
+  const [debouncedViewport, setDebouncedViewport] = useState<{ center: BoatPosition; bounds: ViewportBounds | null } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
   
   const updaterRef = useRef<DataUpdater | null>(null);
@@ -61,6 +61,7 @@ function App() {
   const lastEvaluatedPositionRef = useRef<BoatPosition | null>(null);
   const boatPositionRef = useRef<BoatPosition | null>(null);
   const markersRenderedRef = useRef<number>(0);
+  const viewportDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     updaterRef.current = new DataUpdater(setUpdateStatus);
@@ -69,6 +70,12 @@ function App() {
       updaterRef.current?.cleanup();
     };
   }, []);
+
+  useEffect(() => {
+    if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current);
+    viewportDebounceRef.current = setTimeout(() => setDebouncedViewport(viewport), 150);
+    return () => { if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current); };
+  }, [viewport]);
   
   const loadDataFromDB = useCallback(async () => {
     try {
@@ -163,7 +170,7 @@ function App() {
       const position =
         effectiveMode === 'gps'
           ? boatPosition!
-          : viewport?.center ?? boatPosition ?? FALLBACK_POSITION;
+          : debouncedViewport?.center ?? boatPosition ?? FALLBACK_POSITION;
 
       const now = Date.now();
       if (effectiveMode === 'gps') {
@@ -184,20 +191,19 @@ function App() {
       const applicable = getApplicableRestrictions(candidateAreas, position, filters);
       setApplicableRestrictions(applicable);
 
-      const allSigns = spatialIndex.getAllSigns();
       const areaSource =
         effectiveMode === 'gps'
           ? applicable
-          : viewport?.bounds
+          : debouncedViewport?.bounds
             ? spatialIndex.getAreasInBbox(
-                viewport.bounds.sw.lng,
-                viewport.bounds.sw.lat,
-                viewport.bounds.ne.lng,
-                viewport.bounds.ne.lat
+                debouncedViewport.bounds.sw.lng,
+                debouncedViewport.bounds.sw.lat,
+                debouncedViewport.bounds.ne.lng,
+                debouncedViewport.bounds.ne.lat
               )
             : [];
 
-      const areaNearby = signsToNearbySigns(getSignsInAreas(areaSource, allSigns), position, filters);
+      const areaNearby = signsToNearbySigns(spatialIndex.getSignsInAreas(areaSource), position, filters);
       const radius = effectiveMode === 'gps'
         ? filters.nearbyRadius
         : Math.max(filters.nearbyRadius, MIN_RADIUS_FOR_FALLBACK_M);
@@ -216,7 +222,6 @@ function App() {
         console.debug('[recompute]', {
           mode: effectiveMode,
           indexedAreas: spatialIndex.getAllAreas().length,
-          indexedSigns: allSigns.length,
           candidateAreas: candidateAreas.length,
           applicableAreas: applicable.length,
           areaSigns: areaNearby.length,
@@ -228,7 +233,7 @@ function App() {
     } catch (err) {
       console.error('Position evaluation error:', err);
     }
-  }, [dataLoaded, dataVersion, filters, mode, boatPosition, viewport]);
+  }, [dataLoaded, dataVersion, filters, mode, boatPosition, debouncedViewport]);
   
   const updateFilter = <K extends keyof AppFilters>(key: K, value: AppFilters[K]) => {
     setFilters(prev => {

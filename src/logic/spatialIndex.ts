@@ -1,4 +1,5 @@
 import RBush from 'rbush';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import type { RestrictionArea, TrafficSign, SpatialIndexNode, BBox } from '../types';
 
 export class SpatialIndex {
@@ -110,6 +111,29 @@ export class SpatialIndex {
       .filter((sign): sign is TrafficSign => sign != null);
   }
   
+  /** Returns all signs that fall inside any of the given areas, using R-tree bbox pre-filtering. */
+  getSignsInAreas(areas: RestrictionArea[]): TrafficSign[] {
+    if (areas.length === 0) return [];
+    const seen = new Set<number>();
+    const result: TrafficSign[] = [];
+    for (const area of areas) {
+      const [minX, minY, maxX, maxY] = area.bbox ?? [];
+      if (!Number.isFinite(minX)) continue;
+      const candidates = this.signIndex.search({ minX, minY, maxX, maxY });
+      for (const node of candidates) {
+        if (seen.has(node.id)) continue;
+        const sign = this.signMap.get(node.id);
+        if (!sign) continue;
+        const [lng, lat] = sign.geometry.coordinates as [number, number];
+        if (booleanPointInPolygon([lng, lat], area.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon)) {
+          seen.add(node.id);
+          result.push(sign);
+        }
+      }
+    }
+    return result;
+  }
+
   getAllAreas(): RestrictionArea[] {
     return Array.from(this.areaMap.values());
   }

@@ -74,16 +74,15 @@ body {
 }
 
 .attribution-label {
-  height: 48px;
   display: flex;
   align-items: center;
-  padding: 0 0.75rem;
+  padding: 0.3rem 0.6rem;
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--shadow-md);
-  font-size: 0.7rem;
-  color: #64748B;
-  white-space: nowrap;
+  font-size: 0.6rem;
+  line-height: 1.4;
+  color: #94A3B8;
   pointer-events: none;
 }
 

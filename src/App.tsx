@@ -270,7 +270,7 @@ function App() {
           ⚙️
         </button>
         <span className="attribution-label">
-          © OpenStreetMap, © OpenSeaMap, Väylävirasto (CC BY 4.0)
+          © OpenStreetMap, © OpenSeaMap<br />Väylävirasto (CC BY 4.0)
         </span>
       </div>
       

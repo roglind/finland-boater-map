@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { UpdateStatus } from '../types';
-import { getLastUpdated } from '../data/db';
+import { db, getLastUpdated } from '../data/db';
 import './UpdateButton.css';
 
 interface UpdateButtonProps {
@@ -10,21 +10,28 @@ interface UpdateButtonProps {
 
 function UpdateButton({ onUpdate, status }: UpdateButtonProps) {
   const [lastUpdate, setLastUpdate] = useState<string>('');
-  
+  const [dbInfo, setDbInfo] = useState<string>('');
+
   useEffect(() => {
-    loadLastUpdate();
+    loadInfo();
   }, [status.isUpdating]);
-  
-  const loadLastUpdate = async () => {
+
+  const loadInfo = async () => {
     const rajoitusDate = await getLastUpdated('rajoitus');
     const vesiliikenneDate = await getLastUpdated('vesiliikenne');
-    
+
     if (rajoitusDate || vesiliikenneDate) {
       const date = new Date(rajoitusDate || vesiliikenneDate || '');
       setLastUpdate(date.toLocaleString('fi-FI'));
     }
+
+    const areaCount = await db.restriction_areas.count();
+    const signCount = await db.traffic_signs.count();
+    if (areaCount > 0 || signCount > 0) {
+      setDbInfo(`${areaCount} rajoitusaluetta ja ${signCount} merkkiä`);
+    }
   };
-  
+
   return (
     <div className="update-button-container">
       <button
@@ -44,11 +51,9 @@ function UpdateButton({ onUpdate, status }: UpdateButtonProps) {
           </>
         )}
       </button>
-      
-      {status.message && (
-        <div className={`update-message ${status.isUpdating ? 'active' : ''}`}>
-          {status.message}
-        </div>
+
+      {status.isUpdating && status.message && (
+        <div className="update-message active">{status.message}</div>
       )}
 
       {status.isUpdating && (
@@ -59,11 +64,16 @@ function UpdateButton({ onUpdate, status }: UpdateButtonProps) {
           />
         </div>
       )}
-      
-      {lastUpdate && !status.isUpdating && (
-        <div className="last-update">
-          Viimeksi päivitetty: {lastUpdate}
+
+      {!status.isUpdating && (dbInfo || lastUpdate) && (
+        <div className="download-info">
+          {dbInfo && <div className="download-count">{dbInfo}</div>}
+          {lastUpdate && <div className="download-time">Päivitetty: {lastUpdate}</div>}
         </div>
+      )}
+
+      {status.error && (
+        <div className="update-error">{status.error}</div>
       )}
     </div>
   );

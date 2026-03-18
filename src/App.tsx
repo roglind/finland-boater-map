@@ -101,10 +101,8 @@ function App() {
     try {
       await updaterRef.current?.updateData();
       await loadDataFromDB();
-      alert('Päivitys valmis! Ladattu ' + (await db.restriction_areas.count()) + ' rajoitusaluetta ja ' + (await db.traffic_signs.count()) + ' merkkiä.');
     } catch (error) {
       console.error('Update failed:', error);
-      alert('Päivitys epäonnistui: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 

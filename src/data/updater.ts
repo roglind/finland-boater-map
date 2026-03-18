@@ -125,11 +125,6 @@ export class DataUpdater {
         message: `Päivitys valmis! ${restrictionCount} rajoitusaluetta ja ${signCount} merkkiä`
       });
       
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        this.updateStatus({ progress: 0, message: '' });
-      }, 3000);
-      
     } catch (error) {
       console.error('Update failed:', error);
       this.updateStatus({

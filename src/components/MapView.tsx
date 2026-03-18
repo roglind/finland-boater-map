@@ -86,9 +86,18 @@ function MapView({
             tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
             attribution: '© OpenStreetMap contributors'
+          },
+          openseamap: {
+            type: 'raster',
+            tiles: ['https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© OpenSeaMap contributors'
           }
         },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+        layers: [
+          { id: 'osm', type: 'raster', source: 'osm' },
+          { id: 'openseamap', type: 'raster', source: 'openseamap' }
+        ]
       },
       center: [25.0, 60.5],
       zoom: 8

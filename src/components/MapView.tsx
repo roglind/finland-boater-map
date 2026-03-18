@@ -81,18 +81,14 @@ function MapView({
       style: {
         version: 8,
         sources: {
-          vayla: {
+          osm: {
             type: 'raster',
-            tiles: [
-              'https://julkinen.vayla.fi/inspireapi/wms?SERVICE=WMS&VERSION=1.3.0' +
-              '&REQUEST=GetMap&LAYERS=MerikarttaRasteri&FORMAT=image/png' +
-              '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&STYLES='
-            ],
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
-            attribution: '© Väylävirasto (CC BY 4.0)'
+            attribution: '© OpenStreetMap contributors'
           }
         },
-        layers: [{ id: 'vayla', type: 'raster', source: 'vayla' }]
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
       },
       center: [25.0, 60.5],
       zoom: 8

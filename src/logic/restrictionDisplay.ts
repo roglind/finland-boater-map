@@ -145,7 +145,7 @@ export function getRestrictionDisplayItems(
         vlmlajityyppi,
         iconKey,
         iconUrl: getIconUrl(iconKey),
-        label: buildLabel(vlmlajityyppi, suuruusKmh, r.suuruusRaw, r.rajoitustyyppi),
+        label: buildLabel(vlmlajityyppi, suuruusKmh, suuruusRaw, r.rajoitustyyppi),
         poikkeus: r.poikkeus?.trim() || undefined,
         lisatieto: r.lisatieto?.trim() || undefined,
       };

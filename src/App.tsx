@@ -57,6 +57,9 @@ function App() {
   const [debouncedViewport, setDebouncedViewport] = useState<{ center: BoatPosition; bounds: ViewportBounds | null } | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
   
+  const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
+  const bottomSheetRef = useRef<HTMLDivElement>(null);
+
   const updaterRef = useRef<DataUpdater | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const lastEvaluatedAtRef = useRef<number>(0);
@@ -78,6 +81,17 @@ function App() {
     viewportDebounceRef.current = setTimeout(() => setDebouncedViewport(viewport), 150);
     return () => { if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current); };
   }, [viewport]);
+
+  useEffect(() => {
+    const el = bottomSheetRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      setBottomSheetHeight(el.offsetHeight);
+    });
+    observer.observe(el);
+    setBottomSheetHeight(el.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
   
   const loadDataFromDB = useCallback(async () => {
     try {
@@ -255,6 +269,7 @@ function App() {
         signs={nearbySigns}
         filters={filters}
         mode={mode}
+        mapBottomPadding={bottomSheetHeight}
         onRequestGpsMode={handleRecenterRequest}
         onMapViewportChange={handleMapViewportChange}
         onMapDragStart={handleMapDragStart}
@@ -280,12 +295,14 @@ function App() {
           : '– km/h'}
       </div>
 
-      <BottomSheet 
-        restrictions={applicableRestrictions}
-        signs={nearbySigns}
-        restrictionDisplayItems={restrictionDisplayItems}
-        filters={filters}
-      />
+      <div ref={bottomSheetRef}>
+        <BottomSheet 
+          restrictions={applicableRestrictions}
+          signs={nearbySigns}
+          restrictionDisplayItems={restrictionDisplayItems}
+          filters={filters}
+        />
+      </div>
       
       {showSettings && (
         <SettingsPanel

@@ -15,7 +15,7 @@
 
 .map-crosshair {
   position: absolute;
-  top: 50%;
+  top: calc((100% - var(--map-bottom-pad, 0px)) / 2);
   left: 50%;
   transform: translate(-50%, -50%);
   width: 24px;

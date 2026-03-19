@@ -36,6 +36,7 @@ interface MapViewProps {
   signs: NearbySign[];
   filters: AppFilters;
   mode: 'gps' | 'viewport';
+  mapBottomPadding?: number;
   onRequestGpsMode?: () => void;
   onMapViewportChange?: (lng: number, lat: number, bounds: { sw: { lng: number; lat: number }; ne: { lng: number; lat: number } } | null) => void;
   onMapDragStart?: () => void;
@@ -48,6 +49,7 @@ function MapView({
   signs,
   filters,
   mode,
+  mapBottomPadding = 0,
   onRequestGpsMode,
   onMapViewportChange,
   onMapDragStart,
@@ -59,6 +61,7 @@ function MapView({
   const lastHeadingRef = useRef<number>(0);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const restrictionAreasRef = useRef<RestrictionArea[]>([]);
+  const mapBottomPaddingRef = useRef<number>(mapBottomPadding);
   const [mapReady, setMapReady] = useState(false);
   const viewportCallbackRef = useRef<MapViewProps['onMapViewportChange']>(onMapViewportChange);
   const dragStartCallbackRef = useRef<MapViewProps['onMapDragStart']>(onMapDragStart);
@@ -70,6 +73,10 @@ function MapView({
   useEffect(() => {
     dragStartCallbackRef.current = onMapDragStart;
   }, [onMapDragStart]);
+
+  useEffect(() => {
+    mapBottomPaddingRef.current = mapBottomPadding;
+  }, [mapBottomPadding]);
 
   // Initialize map once on mount
   useEffect(() => {
@@ -110,7 +117,13 @@ function MapView({
     const reportViewport = () => {
       if (!viewportCallbackRef.current) return;
       try {
-        const center = map.getCenter();
+        const canvas = map.getCanvas();
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvas.width / dpr;
+        const cssH = canvas.height / dpr;
+        const pad = mapBottomPaddingRef.current ?? 0;
+        // Use visual center of visible area (above bottom sheet) instead of canvas center
+        const center = map.unproject([cssW / 2, (cssH - pad) / 2]);
         const b = map.getBounds();
         viewportCallbackRef.current(center.lng, center.lat, {
           sw: { lng: b.getWest(), lat: b.getSouth() },
@@ -290,7 +303,7 @@ function MapView({
   }, [signs, onMarkersRendered]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0 }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', flex: 1, minHeight: 0, ['--map-bottom-pad' as string]: `${mapBottomPadding}px` }}>
       <div ref={mapContainerRef} className="map-container" />
       {mode === 'viewport' && (
         <div className="map-crosshair" aria-hidden="true" />

@@ -10,7 +10,32 @@
   width: 32px;
   height: 32px;
   pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  position: relative;
+}
+
+.boat-marker::before,
+.boat-marker::after {
+  content: '';
+  position: absolute;
+  background: #e53e3e;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.boat-marker::before {
+  width: 4px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.boat-marker::after {
+  width: 100%;
+  height: 4px;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
 }
 
 .map-crosshair {

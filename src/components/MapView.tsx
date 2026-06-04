@@ -58,7 +58,6 @@ function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const boatMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const lastHeadingRef = useRef<number>(0);
   const signMarkersRef = useRef<maplibregl.Marker[]>([]);
   const restrictionAreasRef = useRef<RestrictionArea[]>([]);
   const mapBottomPaddingRef = useRef<number>(mapBottomPadding);
@@ -237,26 +236,14 @@ function MapView({
       return;
     }
 
-    if (boatPosition.heading != null) {
-      lastHeadingRef.current = boatPosition.heading;
-    }
-
     if (!boatMarkerRef.current) {
       const el = document.createElement('div');
       el.className = 'boat-marker';
-      el.innerHTML = `<svg viewBox="0 0 24 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-        <path d="M 12 0 L 23 30 L 12 20 L 1 30 Z"
-          fill="#e53e3e" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>`;
-      el.style.transformOrigin = 'top center';
-      el.style.transform = `rotate(${lastHeadingRef.current}deg)`;
-      boatMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'top' })
+      boatMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([boatPosition.lng, boatPosition.lat])
         .addTo(map);
     } else {
       boatMarkerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
-      const el = boatMarkerRef.current.getElement();
-      el.style.transform = `rotate(${lastHeadingRef.current}deg)`;
     }
   }, [boatPosition, mapReady]);
 

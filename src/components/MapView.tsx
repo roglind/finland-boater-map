@@ -226,11 +226,12 @@ function MapView({
   }, [boatPosition, mode]);
 
   // Boat marker at GPS position - always shown so position is visible when panning
+  // Boat marker only visible in GPS mode
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
 
-    if (!boatPosition) {
+    if (!boatPosition || mode !== 'gps') {
       boatMarkerRef.current?.remove();
       boatMarkerRef.current = null;
       return;
@@ -245,7 +246,7 @@ function MapView({
     } else {
       boatMarkerRef.current.setLngLat([boatPosition.lng, boatPosition.lat]);
     }
-  }, [boatPosition, mapReady]);
+  }, [boatPosition, mapReady, mode]);
 
   // Update signs
   useEffect(() => {

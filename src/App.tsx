@@ -62,6 +62,7 @@ function App() {
 
   const updaterRef = useRef<DataUpdater | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const lastEvaluatedAtRef = useRef<number>(0);
   const lastEvaluatedPositionRef = useRef<BoatPosition | null>(null);
   const boatPositionRef = useRef<BoatPosition | null>(null);
@@ -75,6 +76,39 @@ function App() {
       updaterRef.current?.cleanup();
     };
   }, []);
+
+  // Prevent screen lock while the app is in use
+  useEffect(() => {
+    if (!disclaimerAccepted) return;
+    if (!('wakeLock' in navigator)) return;
+
+    let released = false;
+
+    const acquire = async () => {
+      try {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        wakeLockRef.current.addEventListener('release', () => {
+          if (!released) acquire();
+        });
+      } catch {
+        // Wake lock may be denied (e.g. battery saver mode) — fail silently
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') acquire();
+    };
+
+    acquire();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      released = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    };
+  }, [disclaimerAccepted]);
 
   useEffect(() => {
     if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current);
